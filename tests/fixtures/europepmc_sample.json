@@ -1,0 +1,28 @@
+{
+  "resultList": {
+    "result": [
+      {
+        "id": "33031652",
+        "source": "MED",
+        "pmid": "33031652",
+        "doi": "10.1056/nejmoa2022926",
+        "title": "Effect of Hydroxychloroquine in Hospitalized Patients with Covid-19.",
+        "abstractText": "Among hospitalized patients, hydroxychloroquine did not reduce mortality.",
+        "pubYear": "2020",
+        "pubTypeList": {
+          "pubType": ["Randomized Controlled Trial", "Journal Article"]
+        }
+      },
+      {
+        "id": "PPR123456",
+        "source": "PPR",
+        "title": "A preprint with no PMID.",
+        "abstractText": "Preliminary results.",
+        "pubYear": "2021",
+        "pubTypeList": {
+          "pubType": "Preprint"
+        }
+      }
+    ]
+  }
+}

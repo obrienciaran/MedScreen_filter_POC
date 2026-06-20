@@ -1,0 +1,70 @@
+<?xml version="1.0" ?>
+<PubmedArticleSet>
+  <PubmedArticle>
+    <MedlineCitation>
+      <PMID Version="1">11111111</PMID>
+      <Article>
+        <ArticleTitle>Intensive glucose control increases mortality in critically ill patients.</ArticleTitle>
+        <Abstract>
+          <AbstractText Label="BACKGROUND">We compared intensive versus conventional glucose control.</AbstractText>
+          <AbstractText Label="RESULTS">Intensive control was associated with increased mortality and no benefit.</AbstractText>
+        </Abstract>
+        <PublicationTypeList>
+          <PublicationType UI="D016428">Randomized Controlled Trial</PublicationType>
+          <PublicationType UI="D016449">Multicenter Study</PublicationType>
+        </PublicationTypeList>
+      </Article>
+      <CommentsCorrectionsList>
+        <CommentsCorrections RefType="RetractionIn">
+          <PMID Version="1">99999999</PMID>
+        </CommentsCorrections>
+        <CommentsCorrections RefType="CommentIn">
+          <PMID Version="1">88888888</PMID>
+        </CommentsCorrections>
+      </CommentsCorrectionsList>
+    </MedlineCitation>
+    <PubmedData>
+      <ArticleIdList>
+        <ArticleId IdType="pubmed">11111111</ArticleId>
+        <ArticleId IdType="doi">10.1056/NEJMoa0000001</ArticleId>
+      </ArticleIdList>
+    </PubmedData>
+    <MedlineCitation>
+      <Article>
+        <Journal>
+          <JournalIssue>
+            <PubDate>
+              <Year>2009</Year>
+            </PubDate>
+          </JournalIssue>
+        </Journal>
+      </Article>
+    </MedlineCitation>
+  </PubmedArticle>
+  <PubmedArticle>
+    <MedlineCitation>
+      <PMID Version="1">22222222</PMID>
+      <Article>
+        <ArticleTitle>A retraction of a fraudulent vaccine study.</ArticleTitle>
+        <Abstract>
+          <AbstractText>This article retracts the earlier paper.</AbstractText>
+        </Abstract>
+        <PublicationTypeList>
+          <PublicationType>Retraction of Publication</PublicationType>
+        </PublicationTypeList>
+        <Journal>
+          <JournalIssue>
+            <PubDate>
+              <MedlineDate>2010 Feb</MedlineDate>
+            </PubDate>
+          </JournalIssue>
+        </Journal>
+      </Article>
+      <CommentsCorrectionsList>
+        <CommentsCorrections RefType="RetractionOf">
+          <PMID Version="1">33333333</PMID>
+        </CommentsCorrections>
+      </CommentsCorrectionsList>
+    </MedlineCitation>
+  </PubmedArticle>
+</PubmedArticleSet>

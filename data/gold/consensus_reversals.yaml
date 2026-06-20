@@ -1,0 +1,227 @@
+# Gold set for the negative-evidence recall harness.
+#
+# Each `reversed` entry is a claim that was once mainstream and was later
+# contradicted/superseded by higher-tier evidence. `answer_key` lists the PMIDs of
+# the landmark refuting study/SR/guideline that retrieval SHOULD surface. Every PMID
+# below was verified against PubMed esummary (title + year) at authoring time.
+#
+# `still_true` entries are controls: they should NOT be flagged as contradicted.
+# They measure the false-contradiction rate (a harness that flags everything has
+# perfect recall and zero value).
+#
+# This is a high-precision SEED set (10 reversals + 8 controls). Expand it before
+# treating any recall number as definitive — the metric's stability depends on N.
+# Conditions are kept attached in `normalized` on purpose: condition-stripped claims
+# manufacture false refutations (the HCQ lesson).
+
+entries:
+  # ---------------------------------------------------------------- reversed ----
+  - id: hrt-chd
+    claim_text: "Hormone replacement therapy prevents coronary heart disease in healthy postmenopausal women."
+    normalized:
+      intervention: "estrogen plus progestin hormone replacement therapy"
+      outcome: "coronary heart disease events"
+      population: "healthy postmenopausal women"
+      comparator: "placebo"
+      direction: prevents
+    status: reversed
+    answer_key: ["12117397"]   # WHI, JAMA 2002
+    reversal_year: 2002
+    notes: "Observational data suggested cardioprotection; the WHI RCT showed increased CHD risk."
+
+  - id: cast-antiarrhythmics
+    claim_text: "Encainide and flecainide reduce mortality after myocardial infarction by suppressing ventricular arrhythmias."
+    normalized:
+      intervention: "encainide or flecainide (class Ic antiarrhythmics)"
+      outcome: "mortality"
+      population: "patients after myocardial infarction with ventricular ectopy"
+      comparator: "placebo"
+      direction: decreases
+    status: reversed
+    answer_key: ["1900101", "2473403"]   # CAST, NEJM 1991 + 1989 preliminary report
+    reversal_year: 1989
+    notes: "Arrhythmia suppression was assumed protective; CAST found increased mortality."
+
+  - id: ulcer-stress-not-infection
+    claim_text: "Peptic ulcers are caused by stress and excess gastric acid, not by bacterial infection."
+    normalized:
+      intervention: "stress and gastric acid (etiologic claim)"
+      outcome: "peptic ulcer disease"
+      population: "patients with gastritis and peptic ulceration"
+      direction: causes
+    status: reversed
+    answer_key: ["6145023"]   # Marshall & Warren, Lancet 1984
+    reversal_year: 1984
+    notes: "Reversal evidence supports H. pylori as the cause, contradicting the stress/acid etiology."
+
+  - id: hcq-covid-hospitalized
+    claim_text: "Hydroxychloroquine reduces mortality in hospitalized COVID-19 patients."
+    normalized:
+      intervention: "hydroxychloroquine"
+      outcome: "mortality"
+      population: "hospitalized COVID-19 patients"
+      comparator: "usual care"
+      direction: decreases
+    status: reversed
+    answer_key: ["33031652", "33264556"]   # RECOVERY NEJM 2020 + WHO Solidarity NEJM 2021
+    reversal_year: 2020
+    notes: "Condition matters: claim is false IN HOSPITALIZED patients specifically."
+
+  - id: betacarotene-lung-cancer
+    claim_text: "Beta-carotene supplementation prevents lung cancer."
+    normalized:
+      intervention: "beta-carotene supplementation"
+      outcome: "lung cancer incidence"
+      population: "smokers and asbestos-exposed adults"
+      comparator: "placebo"
+      direction: prevents
+    status: reversed
+    answer_key: ["8127329", "8602180"]   # ATBC NEJM 1994 + CARET NEJM 1996
+    reversal_year: 1994
+    notes: "Trials found INCREASED lung cancer incidence in at-risk groups."
+
+  - id: vitamin-e-cv
+    claim_text: "Vitamin E supplementation reduces cardiovascular events."
+    normalized:
+      intervention: "long-term vitamin E supplementation"
+      outcome: "cardiovascular events"
+      population: "adults at risk of cardiovascular disease"
+      comparator: "placebo"
+      direction: decreases
+    status: reversed
+    answer_key: ["15769967"]   # HOPE-TOO, JAMA 2005
+    reversal_year: 2005
+    notes: "No cardiovascular benefit; possible increased heart failure risk."
+
+  - id: rofecoxib-cv-safe
+    claim_text: "Rofecoxib (Vioxx) is a cardiovascularly safe anti-inflammatory."
+    normalized:
+      intervention: "rofecoxib"
+      outcome: "cardiovascular thrombotic events"
+      population: "patients taking it long-term"
+      comparator: "placebo"
+      direction: no_effect
+    status: reversed
+    answer_key: ["15713943"]   # APPROVe, NEJM 2005
+    reversal_year: 2004
+    notes: "Increased cardiovascular events led to market withdrawal."
+
+  - id: tight-glycemic-icu
+    claim_text: "Tight (intensive) glucose control reduces mortality in critically ill patients."
+    normalized:
+      intervention: "intensive insulin therapy for tight glucose control"
+      outcome: "mortality"
+      population: "critically ill ICU patients"
+      comparator: "conventional glucose control"
+      direction: decreases
+    status: reversed
+    answer_key: ["19318384"]   # NICE-SUGAR, NEJM 2009
+    reversal_year: 2009
+    notes: "Earlier single-center trial (PMID 11794168) supported it; NICE-SUGAR found increased mortality."
+
+  - id: estrogen-dementia
+    claim_text: "Estrogen plus progestin therapy reduces the risk of dementia in postmenopausal women."
+    normalized:
+      intervention: "estrogen plus progestin therapy"
+      outcome: "incident dementia"
+      population: "postmenopausal women aged 65+"
+      comparator: "placebo"
+      direction: decreases
+    status: reversed
+    answer_key: ["12771112"]   # WHIMS, JAMA 2003
+    reversal_year: 2003
+    notes: "WHIMS found INCREASED dementia risk."
+
+  - id: antioxidants-mortality
+    claim_text: "Antioxidant supplements reduce all-cause mortality."
+    normalized:
+      intervention: "antioxidant supplements (beta-carotene, vitamin A, vitamin E)"
+      outcome: "all-cause mortality"
+      population: "adults in primary and secondary prevention"
+      comparator: "placebo"
+      direction: decreases
+    status: reversed
+    answer_key: ["17327526"]   # Bjelakovic meta-analysis, JAMA 2007
+    reversal_year: 2007
+    notes: "Meta-analysis found no reduction; some antioxidants associated with increased mortality."
+
+  # ---------------------------------------------------------------- controls ----
+  - id: ctrl-statins-cv
+    claim_text: "Statins reduce cardiovascular mortality in patients at elevated cardiovascular risk."
+    normalized:
+      intervention: "statin therapy"
+      outcome: "cardiovascular mortality"
+      population: "patients at elevated cardiovascular risk"
+      comparator: "placebo"
+      direction: decreases
+    status: still_true
+
+  - id: ctrl-smoking-lung-cancer
+    claim_text: "Cigarette smoking causes lung cancer."
+    normalized:
+      intervention: "cigarette smoking"
+      outcome: "lung cancer"
+      population: "adults"
+      direction: causes
+    status: still_true
+
+  - id: ctrl-ace-hf
+    claim_text: "ACE inhibitors reduce mortality in patients with heart failure with reduced ejection fraction."
+    normalized:
+      intervention: "ACE inhibitors"
+      outcome: "mortality"
+      population: "patients with heart failure with reduced ejection fraction"
+      comparator: "placebo"
+      direction: decreases
+    status: still_true
+
+  - id: ctrl-folate-ntd
+    claim_text: "Periconceptional folic acid supplementation reduces neural tube defects."
+    normalized:
+      intervention: "periconceptional folic acid supplementation"
+      outcome: "neural tube defects"
+      population: "pregnant women / women planning pregnancy"
+      comparator: "placebo"
+      direction: prevents
+    status: still_true
+
+  - id: ctrl-aspirin-secondary
+    claim_text: "Aspirin reduces recurrent vascular events in secondary prevention after myocardial infarction."
+    normalized:
+      intervention: "low-dose aspirin"
+      outcome: "recurrent vascular events"
+      population: "patients with prior myocardial infarction"
+      comparator: "placebo"
+      direction: decreases
+    status: still_true
+
+  - id: ctrl-hpylori-eradication
+    claim_text: "Eradicating Helicobacter pylori heals peptic ulcers and reduces recurrence."
+    normalized:
+      intervention: "H. pylori eradication therapy"
+      outcome: "peptic ulcer healing and recurrence"
+      population: "patients with H. pylori-positive peptic ulcers"
+      comparator: "acid suppression alone"
+      direction: decreases
+    status: still_true
+    notes: "The post-reversal consensus; pairs with ulcer-stress-not-infection."
+
+  - id: ctrl-antihypertensive-stroke
+    claim_text: "Antihypertensive therapy reduces stroke risk in patients with hypertension."
+    normalized:
+      intervention: "antihypertensive therapy"
+      outcome: "stroke"
+      population: "patients with hypertension"
+      comparator: "placebo"
+      direction: decreases
+    status: still_true
+
+  - id: ctrl-insulin-t1dm
+    claim_text: "Insulin therapy is required to treat type 1 diabetes mellitus."
+    normalized:
+      intervention: "insulin therapy"
+      outcome: "survival / glycemic control"
+      population: "patients with type 1 diabetes"
+      direction: decreases
+    status: still_true
+    notes: "Stable basic-science/clinical fact; should be trivially uncontradicted."

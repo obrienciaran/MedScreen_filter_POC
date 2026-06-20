@@ -1,0 +1,41 @@
+[project]
+name = "medfact-poc"
+version = "0.1.0"
+description = "Negative-evidence recall measurement harness for medical claim factuality."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "httpx>=0.27",
+    "duckdb>=1.1",
+    "pydantic>=2.7",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+# Heavier / optional backends. The harness and filter run without these using offline
+# stubs. The graph renderer loads vis-network from a CDN, so it needs no Python dependency.
+embed = ["sentence-transformers>=3.0"]
+anthropic = ["anthropic>=0.40"]
+openai = ["openai>=1.40"]
+gemini = ["google-genai>=0.3"]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+medfact-build-cache = "medfact_poc.cli.build_cache:main"
+medfact-run = "medfact_poc.cli.run_harness:main"
+medfact-graph = "medfact_poc.cli.graph:main"
+medfact-filter = "medfact_poc.cli.filter:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/medfact_poc"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "live: tests that hit live network APIs (opt-in, deselected by default)",
+]
+addopts = "-m 'not live'"

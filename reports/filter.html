@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MedFact — Evidence Graph</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<style>
+  :root {
+    --bg: #f1f3f5; --panel: #ffffff; --ink: #212529; --muted: #868e96;
+    --line: #dee2e6; --accent: #1c3d5a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--ink); background: var(--bg); }
+  #app { display: grid; grid-template-rows: auto 1fr; height: 100vh; }
+  header { padding: 14px 22px; background: var(--accent); color: #fff; }
+  header h1 { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: .2px; }
+  header p { margin: 3px 0 0; font-size: 12.5px; color: #c5d3df; }
+  header p.how { margin-top: 8px; padding: 8px 11px; font-size: 12px; line-height: 1.55;
+                 color: #e7eef4; background: rgba(255,255,255,.10); border-radius: 7px; max-width: 1000px; }
+  main { display: grid; grid-template-columns: 250px 1fr; min-height: 0; }
+  aside { background: var(--panel); border-right: 1px solid var(--line); overflow-y: auto; padding: 16px; }
+  aside h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin: 18px 0 8px; }
+  aside h2:first-child { margin-top: 0; }
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat { background: var(--bg); border-radius: 8px; padding: 8px 10px; }
+  .stat .n { font-size: 19px; font-weight: 700; line-height: 1; }
+  .stat .k { font-size: 10.5px; color: var(--muted); margin-top: 3px; }
+  .stat.gap .n { color: #e8590c; }
+  label.row { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 4px 0; cursor: pointer; }
+  label.row input { accent-color: var(--accent); }
+  .swatch { width: 22px; height: 0; border-top-width: 3px; border-top-style: solid; flex: 0 0 22px; }
+  .swatch.dash { border-top-style: dashed; }
+  .legend-item { display: flex; align-items: center; gap: 9px; font-size: 12.5px; padding: 3px 0; color: #495057; }
+  .dot, .box, .star, .tri { flex: 0 0 16px; text-align: center; }
+  .dot { width: 13px; height: 13px; border-radius: 50%; border: 1px solid; }
+  .box { width: 16px; height: 12px; border-radius: 2px; }
+  .star { width: 16px; height: 0; font-size: 16px; line-height: 1; }
+  .tri { width: 16px; height: 0; font-size: 14px; line-height: 1; }
+  button { width: 100%; margin-top: 8px; padding: 8px; border: 1px solid var(--line); background: #fff; border-radius: 8px; font-size: 12.5px; cursor: pointer; }
+  button:hover { background: var(--bg); }
+  #canvas-wrap { position: relative; min-height: 0; }
+  #net { width: 100%; height: 100%; background: radial-gradient(circle at 50% 40%, #ffffff 0%, #eef1f4 100%); }
+  #detail { position: absolute; top: 14px; right: 14px; width: 280px; max-height: calc(100% - 28px); overflow-y: auto;
+            background: rgba(255,255,255,.97); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px;
+            box-shadow: 0 6px 24px rgba(0,0,0,.10); font-size: 12.5px; display: none; }
+  #detail .tag { display: inline-block; font-size: 10px; text-transform: uppercase; letter-spacing: .5px; padding: 2px 7px;
+                 border-radius: 99px; color: #fff; margin-bottom: 8px; }
+  #detail h3 { margin: 0 0 8px; font-size: 13.5px; line-height: 1.4; }
+  #detail pre { white-space: pre-wrap; word-break: break-word; font-family: inherit; color: #495057; margin: 0; line-height: 1.5; }
+  #detail .close { float: right; cursor: pointer; color: var(--muted); border: none; background: none; width: auto; margin: 0; font-size: 16px; padding: 0; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>MedFact — Filter Results</h1>
+    <p>Each node is a PubMed paper coloured by its truthfulness verdict. Gold stars are works that refuted it; red edges mark refutations.</p>
+    <p class="how">What this shows: the filter deciding whether each paper is truthful. Papers arrive as PubMed XML. For each paper, the filter first pulls out the claims it makes. It then gathers evidence on those claims from two places: the paper's own correction and retraction links inside the XML, and a search of trusted medical literature. It reads how each study it gathered relates to the claim, whether it disproves it, supports it, or neither. Each box is a paper, coloured by the verdict that results, and a star marks a study that disproved it. The verdict tells downstream training to keep, down-weight, or drop the paper, and it comes from the gathered evidence, not from a model's own opinion.</p>
+  </header>
+  <main>
+    <aside>
+      <h2>Summary</h2>
+      <div class="stat-grid"><div class="stat gap"><div class="n">1</div><div class="k">Refuted paper</div></div><div class="stat "><div class="n">1</div><div class="k">Unverified paper</div></div><div class="stat "><div class="n">1</div><div class="k">evidence</div></div><div class="stat "><div class="n">1</div><div class="k">key / refuting</div></div></div>
+
+      <h2>Edge filters</h2>
+      <label class="row"><input type="checkbox" id="f-refutes" checked><span class="swatch" style="border-top-color:#e03131"></span>Refutes</label>
+      <label class="row"><input type="checkbox" id="f-supports" checked><span class="swatch" style="border-top-color:#2f9e44"></span>Supports</label>
+      <label class="row"><input type="checkbox" id="f-neutral" checked><span class="swatch" style="border-top-color:#adb5bd"></span>Neutral</label>
+      <label class="row"><input type="checkbox" id="f-missing" checked><span class="swatch dash" style="border-top-color:#f08c00"></span>Not retrieved</label>
+      <label class="row"><input type="checkbox" id="f-retraction" checked><span class="swatch dash" style="border-top-color:#9c36b5"></span>Retraction</label>
+
+      <h2>View</h2>
+      <label class="row"><input type="checkbox" id="f-hidecontrols">Hide still-true controls</label>
+      <label class="row"><input type="checkbox" id="f-onlygaps">Recall gaps only</label>
+      <button id="btn-physics">Freeze layout</button>
+      <button id="btn-fit">Reset view</button>
+
+      <h2>Legend</h2>
+      <div class="legend-item"><span class="box" style="background:#c92a2a;border:1px solid #7d1a1a"></span>Refuted paper</div><div class="legend-item"><span class="box" style="background:#495057;border:1px solid #2b3035"></span>Unverified paper</div><div class="legend-item"><span class="star" style="color:#f59f00">★</span>Key evidence the search found</div>
+    </aside>
+    <div id="canvas-wrap">
+      <div id="net"></div>
+      <div id="detail">
+        <button class="close" id="detail-close">×</button>
+        <span class="tag" id="detail-tag"></span>
+        <h3 id="detail-title"></h3>
+        <pre id="detail-body"></pre>
+      </div>
+    </div>
+  </main>
+</div>
+<script>
+  const rawNodes = [{"id": "paper:11111111", "name": "Intensive glucose control increases mor\u2026", "label": "Intensive glucose control increases mor\u2026", "title": "Paper: Intensive glucose control increases mortality in critically ill patients.\nPMID: 11111111\nVerdict: refuted\nScore: 0.00\nAction: drop\nClaims: 1", "group": "claim", "shape": "box", "size": 26, "color": {"background": "#c92a2a", "border": "#7d1a1a", "highlight": {"background": "#c92a2a", "border": "#7d1a1a"}}, "font": {"color": "#ffffff", "size": 15, "face": "Inter, system-ui, sans-serif"}, "controlFlag": false, "statusLabel": "Refuted paper"}, {"id": "ev:99999999", "name": "99999999", "label": "", "title": "Evidence that disproves this paper\nPMID: 99999999", "group": "evidence", "shape": "star", "size": 22, "color": {"background": "#f59f00", "border": "#b07a00", "highlight": {"background": "#f59f00", "border": "#b07a00"}}, "borderWidth": 1.5, "font": {"color": "#343a40", "size": 12, "face": "Inter, system-ui, sans-serif", "strokeWidth": 3, "strokeColor": "#ffffff"}, "isAnswerKey": true, "isGap": false, "retrieved": true, "controlOnly": false}, {"id": "paper:22222222", "name": "A retraction of a fraudulent vaccine st\u2026", "label": "A retraction of a fraudulent vaccine st\u2026", "title": "Paper: A retraction of a fraudulent vaccine study.\nPMID: 22222222\nVerdict: unverified\nScore: 0.50\nAction: keep\nClaims: 1", "group": "claim", "shape": "box", "size": 26, "color": {"background": "#495057", "border": "#2b3035", "highlight": {"background": "#495057", "border": "#2b3035"}}, "font": {"color": "#ffffff", "size": 15, "face": "Inter, system-ui, sans-serif"}, "controlFlag": false, "statusLabel": "Unverified paper"}];
+  const rawEdges = [{"from": "paper:11111111", "to": "ev:99999999", "arrows": "to", "etype": "stance", "stance": "refutes", "smooth": {"type": "dynamic"}, "title": "Evidence refutes the claim", "color": {"color": "#e03131"}, "width": 3}];
+  const physicsOn = true;
+
+  rawEdges.forEach((e, i) => { e.id = "e" + i; });
+
+  // Nodes touched by a "missing" (recall gap) edge, for the gaps-only view.
+  const gapNodes = new Set();
+  rawEdges.filter(e => e.etype === "missing").forEach(e => { gapNodes.add(e.from); gapNodes.add(e.to); });
+
+  const nodes = new vis.DataSet(rawNodes);
+  const edges = new vis.DataSet(rawEdges);
+
+  const options = {
+    nodes: { borderWidth: 1.5, shadow: { enabled: true, size: 4, x: 0, y: 1, color: "rgba(0,0,0,0.12)" } },
+    edges: { smooth: { type: "dynamic" }, selectionWidth: 2, hoverWidth: 1.5 },
+    interaction: { hover: true, tooltipDelay: 120, navigationButtons: false, keyboard: false },
+    physics: {
+      enabled: physicsOn,
+      solver: "barnesHut",
+      barnesHut: { gravitationalConstant: -2400, centralGravity: 0.9, springLength: 105, springConstant: 0.06, avoidOverlap: 0.6, damping: 0.6 },
+      stabilization: { iterations: 1600, fit: true },
+      minVelocity: 0.5,
+    },
+  };
+
+  const container = document.getElementById("net");
+  const network = new vis.Network(container, { nodes, edges }, options);
+
+  // --- hover / select neighbourhood focus ---------------------------------
+  // Claim labels are always drawn; evidence labels are blank by default and only revealed
+  // for the focused node and its neighbours, so the canvas is not buried in overlapping
+  // titles. A node's full name lives in n.name for both the reveal and the detail panel.
+  // Claim labels and recall-gap (missed answer key) labels are always drawn — the gap is a
+  // single rare node and the headline finding, so it must not be hard to spot. Other
+  // evidence labels appear only when their node is focused.
+  const labelFor = (n, revealed) => (n.group === "claim" || n.isGap || revealed) ? n.name : "";
+  function focusOn(nodeId) {
+    const connected = new Set([nodeId]);
+    network.getConnectedNodes(nodeId).forEach(id => connected.add(id));
+    const connectedEdges = new Set(network.getConnectedEdges(nodeId));
+    // Reveal the labels of the focused node and its neighbours. Node colours are left fully
+    // solid (no opacity fade) so the verdict colours never wash out to a pale tint. Focus is
+    // signalled by dimming the unrelated edges instead.
+    nodes.update(rawNodes.map(n => ({
+      id: n.id,
+      label: labelFor(n, connected.has(n.id)),
+    })));
+    edges.update(rawEdges.map(e => ({
+      id: e.id,
+      color: { ...e.color, opacity: connectedEdges.has(e.id) ? (e.color.opacity || 1) : 0.12 },
+    })));
+  }
+  function clearFocus() {
+    nodes.update(rawNodes.map(n => ({ id: n.id, label: labelFor(n, false) })));
+    edges.update(rawEdges.map(e => ({ id: e.id, color: e.color })));
+  }
+  network.on("hoverNode", p => focusOn(p.node));
+  network.on("blurNode", clearFocus);
+
+  // --- detail panel --------------------------------------------------------
+  const detail = document.getElementById("detail");
+  const tagColours = { claim: "#1c3d5a", evidence: "#b08800" };
+  function showDetail(node) {
+    document.getElementById("detail-tag").textContent =
+      node.group === "claim" ? (node.statusLabel || "claim")
+                              : (node.isAnswerKey ? "key evidence" : "evidence");
+    document.getElementById("detail-tag").style.background = tagColours[node.group];
+    document.getElementById("detail-title").textContent = node.name || node.label;
+    document.getElementById("detail-body").textContent = node.title || "";
+    detail.style.display = "block";
+  }
+  network.on("click", p => {
+    if (p.nodes.length) { showDetail(nodes.get(p.nodes[0])); focusOn(p.nodes[0]); }
+    else { detail.style.display = "none"; clearFocus(); }
+  });
+  document.getElementById("detail-close").onclick = () => { detail.style.display = "none"; clearFocus(); };
+
+  // --- filters -------------------------------------------------------------
+  function applyFilters() {
+    const on = id => document.getElementById(id).checked;
+    const kinds = {
+      refutes: on("f-refutes"), supports: on("f-supports"), neutral: on("f-neutral"),
+      missing: on("f-missing"), retraction: on("f-retraction"),
+    };
+    const hideControls = on("f-hidecontrols");
+    const onlyGaps = on("f-onlygaps");
+
+    nodes.update(rawNodes.map(n => {
+      let hidden = false;
+      if (hideControls && (n.controlFlag || n.controlOnly)) hidden = true;
+      if (onlyGaps && !gapNodes.has(n.id)) hidden = true;
+      return { id: n.id, hidden };
+    }));
+    edges.update(rawEdges.map(e => {
+      const key = e.etype === "stance" ? e.stance : e.etype;
+      let visible = kinds[key] !== false;
+      if (onlyGaps && e.etype !== "missing") visible = false;
+      return { id: e.id, hidden: !visible };
+    }));
+  }
+  ["f-refutes", "f-supports", "f-neutral", "f-missing", "f-retraction", "f-hidecontrols", "f-onlygaps"]
+    .forEach(id => document.getElementById(id).addEventListener("change", applyFilters));
+
+  // --- buttons -------------------------------------------------------------
+  let frozen = !physicsOn;
+  const physBtn = document.getElementById("btn-physics");
+  physBtn.textContent = frozen ? "Resume layout" : "Freeze layout";
+  physBtn.onclick = () => {
+    frozen = !frozen;
+    network.setOptions({ physics: { enabled: !frozen } });
+    physBtn.textContent = frozen ? "Resume layout" : "Freeze layout";
+  };
+  document.getElementById("btn-fit").onclick = () => network.fit({ animation: true });
+
+  // Run the force layout once to position the nodes, then switch physics off so the graph
+  // settles and stops drifting. The user can hit "Resume layout" to re-run it.
+  network.once("stabilizationIterationsDone", () => {
+    frozen = true;
+    network.setOptions({ physics: { enabled: false } });
+    physBtn.textContent = "Resume layout";
+    // Fit to frame the whole graph, then zoom in so the opening view is close, not a tiny
+    // cluster lost in whitespace. Capped so a small graph does not over-magnify.
+    network.fit({ animation: false });
+    network.moveTo({ scale: Math.min(network.getScale() * 1.7, 1.4) });
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,3 @@
+pmid,title,verdict,score,action,n_claims,n_refuted_claims,top_refuting_tier,refuting_pmids,notes
+11111111,Intensive glucose control increases mortality in critically ill patients.,refuted,0.000,drop,1,1,0.95,99999999,
+22222222,A retraction of a fraudulent vaccine study.,unverified,0.500,keep,1,0,0.00,,
