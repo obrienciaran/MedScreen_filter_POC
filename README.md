@@ -2,42 +2,25 @@
 
 ## What this is
 
-A proof of concept for a **truth-based data quality filter for medical training
-data**. Point it at a corpus of PubMed medical papers in XML format and it produces a
-flat table, one row per paper, judging whether the paper's claims hold up against
-trusted medical evidence. Downstream training can then keep, down-weight, or drops each
-paper based on that table.
+A proof of concept for a **truth-based data quality filter for medical training data**. Point it
+at a corpus of PubMed papers in XML format and it produces a flat table, one row per paper,
+judging whether the paper's claims hold up against trusted medical evidence.
 
-The point is to filter on *truth*, not on surface features. This is what sets this filter
-apart from existing quality filters. Existing papers judge a paper by
-how it looks rather than whether it is right:
+The point is to filter on *truth*, not on surface features. Existing approaches judge a paper by
+how it looks, not whether it is right:
 
-- **Rule-based filters** check form such as length, punctuation, repetition, language. They
-  strip out gibberish and spam, but well-formed false claims pass through.
-- **Quality classifiers** are trained to favour text that resembles a trusted reference
-  like Wikipedia or textbooks. They reward resemblance to authority, not correctness.
-  A wrong claim written in a journal's style also passes through.
-- **Multi-dimensional rating** scores text across several style axes at once, such as
-  readability, professionalism, educational value. More axes, but every one still
-  measures how the text reads, not whether its claims are true.
-- **LLM rating** asks a language model how good or educational a passage looks. Models
-  tend to reward fluency and coherence, which is exactly what confident misinformation imitates best.
+- **Rule-based filters** catch gibberish and spam, but a well-formed false claim passes through.
+- **Quality classifiers** reward resemblance to a trusted reference like Wikipedia, not correctness.
+- **Multi-dimensional rating** adds more style axes (readability, professionalism), but still
+  measures how the text reads, not whether it is true.
+- **LLM rating** rewards fluency and coherence, exactly what confident misinformation imitates best.
 
+None of these ask "is this true?" This filter does. It pulls out each claim and checks it against
+the evidence, so the verdict is *discovered*, not guessed from how the paper reads.
 
-The shared blind spot is that each of these approahces answer "does this look trustworthy?"
-while none answers "is this true?" 
-
-This filter does not score appearance at all. It pulls out each claim and checks it
-against the evidence, asking whether the research backs it up or contradicts it, and the
-verdict is *discovered* from that evidence, not guessed from how the paper reads. What
-exposes a wrong paper is the contradicting evidence itself.
-
-<img width="1501" height="776" alt="Screenshot 2026-06-21 at 03 45 19" src="https://github.com/user-attachments/assets/e221edca-404a-47de-abb0-a8157dade899" />
-
-This is a POC. It runs on a small curated slice and tests the one dependency the
-whole proposed approach rests on. That is to check if the filter has the ability to *find* the evidence that contradicts a
-wrong claim. If retrieval cannot find the contradicting evidence, the filter would look reliable on famous topics, where the evidence is
-easy to find, and be quietly wrong on rarer ones, where it is hard to find.
+This is a POC. It tests the one dependency the whole approach rests on: can retrieval *find* the
+evidence that contradicts a wrong claim? If it can't, the filter looks reliable on famous topics
+(where evidence is easy to find) and is quietly wrong on rarer ones.
 
 ## ➡️ What it produces
 
@@ -47,18 +30,18 @@ Running the filter writes `reports/filter.csv`, one row per paper:
 |---|---|---|
 | paper identifier | do its claims hold up against the evidence | confidence, contradicting studies, evidence tier, other metadata |
 
-Every column is documented in [`reports/README.md`](reports/README.md). Downstream training
-keeps, down-weights, or drops papers from that table. The evidence graph the filter can also
-draw is an optional visual aid over the same data, not the product.
+Every column is documented in [`reports/README.md`](reports/README.md). Downstream training then
+keeps, down-weights, or drops papers based on that table. The filter can also draw an evidence
+graph as an optional visual aid over the same data (see [Visualization](#visualization-optional)),
+but the table is the product.
 
 <img width="1174" height="388" alt="Screenshot 2026-06-21 at 03 48 03" src="https://github.com/user-attachments/assets/57568d0c-4dd7-47e9-a5db-6f6889f573a9" />
 
 ## 🛠️ How it works
 
-The filter takes a directory of PubMed XML papers and processes **each paper on its own**. It
-does not compare papers against each other and there is no pairwise cross-check. A paper is judged
-only against external trusted evidence, never against the rest of your corpus, so the cost
-grows linearly with the number of papers, not quadratically.
+The filter processes **each paper on its own**, never comparing papers against each other. A
+paper is judged only against external trusted evidence, so the cost grows linearly with the
+number of papers, not quadratically.
 
 For one paper the steps are:
 
@@ -72,28 +55,23 @@ For one paper the steps are:
 5. **Score** — weigh those labels by evidence tier into a per-claim verdict, then take the
    paper's worst claim as the paper's verdict (see [How a paper is scored](#how-a-paper-is-scored)).
 
-The result is one row per paper in `reports/filter.csv`.
-
 ### 🔎 How evidence is found
 
-The evidence is not in your corpus, and there is no local copy of the medical literature. **The
-database search happens on PubMed's and Europe PMC's own servers, not here.** For each claim
-the filter builds a few keyword/boolean queries (`transformation/query.py`) and sends them to
-the PubMed E-utilities and Europe PMC REST search endpoints. Their search engines scan their
-full databases and return only the matching study IDs, already ranked by relevance and capped
-at a small limit (default 20 per query). The filter unions those matches with any dispute links
-from the paper's own XML, then fetches each candidate's abstract and publication type. The
-result is a small per-claim candidate pool, a few dozen studies.
+The evidence is not stored locally; search happens on PubMed's and Europe PMC's own servers, not
+here. For each claim the filter builds a few keyword/boolean queries (`transformation/query.py`)
+and sends them to the PubMed E-utilities and Europe PMC REST search endpoints, which return a
+capped, relevance-ranked list of matching study IDs (default 20 per query). The filter unions
+those matches with any dispute links from the paper's own XML, then fetches each candidate's
+abstract and publication type, giving a small per-claim candidate pool.
 
-The queries deliberately include contradiction-seeking and high-tier formulations. **Whether
-they actually surface the disproving study is not assumed. This is the exact thing this POC is
-measuring (retrieval recall), because a boolean query that misses the right terms is this
-project's central failure mode.** When a query fails the tags it `entity_miss` (the
-query missed the claim's terms) or `not_indexed` (no query or source returned the study). This
-is **not** a vector search over all of PubMed; no such index exists here. Embeddings and cosine
-similarity (`transformation/semantic.py`) appear only in the *validation test*, where they re-rank an
-already-fetched pool to measure how near the top the disproving study lands (recall@k).
-Re-ranking cannot recover a study the API queries never returned.
+The queries deliberately seek out contradicting, high-tier evidence, but whether they succeed is
+not assumed — that is the exact thing this POC measures (retrieval recall), since a query that
+misses the right terms is the project's central failure mode. A miss is tagged `entity_miss` (the
+query missed the claim's terms) or `not_indexed` (no query or source returned the study). This is
+**not** a vector search over all of PubMed: embeddings and cosine similarity
+(`transformation/semantic.py`) only re-rank an already-fetched pool, in the validation test, to
+measure how near the top the disproving study lands (`recall@k`). Re-ranking cannot recover a
+study the queries never returned.
 
 ### 💵 What it costs
 
@@ -102,41 +80,34 @@ The expense is dominated by network calls (PubMed/Europe PMC search and fetch) a
 concurrently (`MEDFACT_FILTER_CONCURRENCY`, default 4). The whole pipeline also runs offline on
 stub backends with no network and no LLM, for checking the plumbing before spending anything.
 
-> **Status: this is a proof of concept (POC) for a data filter, not yet a finished tool.**
-> As an early test, the filter was run on a small batch of just 10 PubMed papers using Google's Gemini 2.5 Flash Lite.
-> model. It has **not** been tested on a large or varied dataset of PubMed XML files, and the
-> query construction, retrieval, and scoring all need further refinement before any production
-> use. Treat every result here as an early demonstration of the idea, not a reliable data
-> filtering tool yet.
+> **Status: proof of concept, not a finished tool.** It was tested on a small batch of 10 PubMed
+> papers using Gemini 2.5 Flash Lite. It has **not** been run on a large or varied dataset, and
+> query construction, retrieval, and scoring all need further refinement before production use.
 
 ## 🤔 Doesn't this exist already?
 
 Two simpler ideas sound like they would do the same job. Neither does.
 
-**Why not trust well-cited sources?** Filtering by reputation, i.e. keeping high-citation authors
-and journals (the H-index and similar) judges who is speaking, not whether what they say is
-true. A highly cited researcher in a top journal can still publish a claim that is later
-overturned; the hormone-replacement-therapy belief was exactly that, and it carried a high
-citation count the whole time. Reputation also has the blind spot where famous
-work is easy to find, and obscure-but-correct work is not, so a reputation filter looks strong on
-famous topics and fails on the rare ones.
+**Why not trust well-cited sources?** Reputation (citation count, H-index, journal prestige)
+judges who is speaking, not whether what they say is true. The hormone-replacement-therapy belief
+was highly cited the entire time it was wrong, and reputation has the same blind spot as fame
+generally: well-known work is easy to check, obscure-but-correct work is not.
 
-**Why not just count refuted claims?** Counting refutations assumes the hard part is already
-done. To count them you must first *find* the study that refutes each claim and confirm it
-does, which is what this POC tests rather than takes for granted. You cannot count
-refutations you cannot find.
+**Why not just count refuted claims?** That assumes the hard part, finding the study that refutes
+each claim and confirming it does, is already done. This POC tests that step rather than taking
+it for granted; you cannot count refutations you cannot find.
 
 ## 🤖 Where the language model fits
 
-The language model has a deliberately bounded role. It does two jobs. It extracts each claim
-from a paper's text, and it judges whether a retrieved study refutes or supports that claim.
-It does not run the search, decide which papers are kept or dropped, or score a paper on its
-own, those follow from the retrieved evidence and its tier.
+The language model has a deliberately bounded role. It does two jobs: it extracts each claim
+from a paper's text, and it judges whether a retrieved study refutes or supports that claim. It
+does not run the search, decide which papers are kept or dropped, or score a paper on its own —
+those follow from the retrieved evidence and its tier.
 
 ## 📄 How a paper is scored
 
-Scoring is mechanical and evidence-driven, not a model opinion. It runs per claim, then rolls
-up to the paper. The thresholds all live in `transformation/scoring.py`.
+Scoring is mechanical and evidence-driven, not a model opinion. It runs per claim, then rolls up
+to the paper. The thresholds all live in `transformation/scoring.py`.
 
 1. **Weigh each study.** Every retrieved study carries an evidence tier set by its publication
    type (guideline 1.0, retraction 0.95, systematic review 0.9, meta-analysis 0.85, randomised
@@ -160,59 +131,41 @@ looser cutoff than the default actions.
 
 ## ❓ Validation: can the search find the evidence?
 
-The filter is only as good as its search. If the search cannot find the study that contradicts
-a wrong claim, the filter cannot catch that claim. Everything rests on this one step, so a
-separate validation test (`medfact-run`) checks it on its own.
+The filter is only as good as its search: if it cannot find the study that contradicts a wrong
+claim, it cannot catch that claim. A separate validation test (`medfact-run`) checks this one
+step on its own, using claims the field already knows were wrong, where the disproving study is
+recorded in advance. It runs the filter's search over those claims and checks how often it finds
+the known study — a hand-curated check on cases where the answer is already known.
 
-The test is simple. We take a set of claims the field already knows were wrong, where the study
-that disproved each one is written down in advance. We run the filter's search over those
-claims and check how often it brings the known disproving study back. This is the proof of
-concept: a small, hand-curated check that the search works on cases where we already know the
-answer.
-
-> Again, this is a proof-of-concept test for the data filter, not a full validation. It has only
-> been run on this small curated slice (the 10-paper Gemini 2.5 Flash Lite test mentioned above),
-> not on a wide or varied dataset of PubMed papers.
-
-The search runs in two steps, and scores each step separately so that when
-something goes wrong you can tell which step broke:
+The search runs in two steps, scored separately so a failure can be traced to the right one:
 
 1. **Fetch** — did the search pull the disproving study back at all?
 2. **Judge** — once fetched, did the model recognise it as refuting the claim?
 
-Each score is a *recall*: of the studies that should have been found, the fraction that
-actually were. Every claim counts as a pass or a fail, and the recall is the percentage that
-pass. The validation test reports four:
+Each score is a *recall*: the fraction of claims that passed out of those that should have. The
+test reports four:
 
-- **Retrieval recall** scores the fetch step: of the disproving studies we know exist, the
-  fraction the search pulled back. It is checked against the written answer key, so it does not
-  depend on the model at all. This is the headline number.
-- **Stance recall** scores the judge step: of the disproving studies that were fetched, the
-  fraction the model then labelled as refuting. Keeping the two apart pinpoints any failure —
-  a low retrieval recall means the search missed the study, while a high retrieval recall but
-  low stance recall means the search found it and the model failed to recognise it.
-- **Recall@k** is retrieval recall counted only within the top k results by relevance (k = 1,
-  5, 10, 20). It shows whether the disproving study ranked near the top or was buried deep in
-  the pool.
-- **False-contradiction rate** is a safety check on the control claims that are still true: the
-  fraction the search wrongly flagged as refuted. A filter that flags everything is useless, so
-  lower is better.
+- **Retrieval recall** — of the disproving studies that exist, the fraction the search pulled
+  back. Checked against the written answer key, so it does not depend on the model. The headline
+  number.
+- **Stance recall** — of the disproving studies that were fetched, the fraction the model then
+  labelled as refuting. Splitting fetch from judge pinpoints which step failed.
+- **Recall@k** — retrieval recall counted only within the top k results by relevance (k = 1, 5,
+  10, 20), showing whether the disproving study ranked near the top or was buried.
+- **False-contradiction rate** — fraction of still-true control claims wrongly flagged as
+  refuted. Lower is better.
 
-When a claim fails, the validation test also tags *why*, so a miss can be traced to a root cause:
+A failed claim is also tagged with why, so a miss traces to a root cause:
 
-- `not_indexed`: the disproving study was never fetched by any query or source.
-- `entity_miss`: the query missed the claim's terms, so almost nothing came back.
-- `retrieved_not_recognized`: the study was fetched, but the model did not call it refuting.
-- `condition_mismatch`: the study was fetched, but it tested a different population or setting.
-- `tier_inversion`: only weak evidence was recognised while a stronger refutation was missed.
+- `not_indexed` — never fetched by any query or source.
+- `entity_miss` — the query missed the claim's terms.
+- `retrieved_not_recognized` — fetched, but the model did not call it refuting.
+- `condition_mismatch` — fetched, but it tested a different population or setting.
+- `tier_inversion` — only weak evidence was recognised while a stronger refutation was missed.
 
-The percentage summaries and the failure-tag tally are printed at the end of the run and saved
-to a markdown report (`reports/recall-<timestamp>.md`); the per-claim detail behind them, one
-row per claim with its pass/fail flags and failure tag, goes to a CSV
-(`reports/recall-<timestamp>.csv`). These files only validate the search and are separate from
-the filter's own per-paper table (`reports/filter.csv`). If retrieval recall is poor, a
-claim-scoring filter is confident about well-known cases and silently wrong about everything
-that is under-indexed.
+Results print at the end of the run and save to a markdown report
+(`reports/recall-<timestamp>.md`) plus a per-claim CSV (`reports/recall-<timestamp>.csv`). These
+validate the search only, separate from the filter's own per-paper table (`reports/filter.csv`).
 
 ## ⚙️ Setup
 
@@ -248,26 +201,23 @@ MEDFACT_STANCE_BACKEND=llm MEDFACT_RETRIEVER=live \
   medfact-filter --input path/to/pubmed_xml_dir
 ```
 
-**Where to find the results.** The filter writes exactly two files, and these are what you
-open to view a run:
+**Where to find the results.** The filter writes exactly two files:
 
 - **`reports/filter.csv`** — the per-paper table (pmid, verdict, score, action, metadata),
   one row per paper. Every column is documented in [`reports/README.md`](reports/README.md).
 - **`reports/filter.html`** — the interactive graph of the same run. Open it in a browser.
 
-Two other HTML files in `reports/` are *not* a filter run and are easy to mistake for one:
-`reports/graph_demo.html` is a prebuilt static example shipped with the repo, and
-`reports/graph.html` is the **validation** visualization (written by `medfact-graph`), not the
-filter. Only `reports/filter.html` and `reports/filter.csv` come from `medfact-filter`.
+Two other HTML files in `reports/` are *not* a filter run: `reports/graph_demo.html` is a static
+example shipped with the repo, and `reports/graph.html` is the **validation** visualization
+(written by `medfact-graph`). Only `reports/filter.html` and `reports/filter.csv` come from
+`medfact-filter`.
 
-The input is PubMed/MEDLINE XML because that format carries the `CommentsCorrectionsList`
-retraction and comment links, the publication types (evidence tier), and MeSH terms the filter
-relies on.
-
-The ingester accepts any PubMed XML it can read. It prints an error and skips a file it cannot
-read or that is not a PubMed article set, and it prints a highlight for a paper that has no
-`CommentsCorrectionsList`, which is the offline truthfulness signal. During live retrieval the
-filter also queries Europe PMC as a second evidence source. That is retrieval, not input.
+The input is PubMed/MEDLINE XML because it carries the `CommentsCorrectionsList` retraction and
+comment links, publication types (evidence tier), and MeSH terms the filter relies on. The
+ingester accepts any PubMed XML it can read, skipping (with an error) any file it cannot, and
+flags a paper with no `CommentsCorrectionsList` as a highlight, since that absence is itself the
+offline truthfulness signal. During live retrieval the filter also queries Europe PMC as a
+second evidence source.
 
 ## 🏃 Run the validation
 
@@ -296,12 +246,14 @@ recall numbers come from the stub backends and are not a real measurement.
 
 ## 🌀 Visualization (optional)
 
-The graph is a secondary aid. `medfact-graph` renders a validation run to a
-self-contained, interactive page (`reports/graph.html`); the page header explains how to read
-it (claims as boxes, retrieved studies as dots, line colour for stance), and it adds a
-summary, a legend, edge-type filters, a "recall gaps only" view, and hover/click focus. The
-filter draws the same kind of graph for its own results at `reports/filter.html`. Run
-`medfact-run` (or `medfact-filter`) first so there is data to draw.
+The graph is a secondary aid, not the product. `medfact-graph` renders a validation run to a
+self-contained, interactive page (`reports/graph.html`); its header explains how to read it
+(claims as boxes, retrieved studies as dots, line colour for stance), with a summary, legend,
+edge-type filters, a "recall gaps only" view, and hover/click focus. The filter draws the same
+kind of graph for its own results at `reports/filter.html`. Run `medfact-run` (or
+`medfact-filter`) first so there is data to draw.
+
+<img width="1501" height="776" alt="Screenshot 2026-06-21 at 03 45 19" src="https://github.com/user-attachments/assets/e221edca-404a-47de-abb0-a8157dade899" />
 
 ## 🛣️ Roadmap
 
