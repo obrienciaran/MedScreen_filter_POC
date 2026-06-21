@@ -1,6 +1,6 @@
-# MedFact — Evidence-Grounded Data Quality Filter for Medical Papers
+# 🏥 MedFact — Evidence-Grounded Data Quality Filter for Medical Papers
 
-## 🎉 What this is
+## What this is
 
 A proof of concept for a **truth-based data quality filter for medical training
 data**. Point it at a corpus of PubMed medical papers in XML format and it produces a
