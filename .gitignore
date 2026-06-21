@@ -11,6 +11,13 @@ data/cache/
 *.duckdb
 *.duckdb.wal
 
+# Generated report output (regenerable; keep reports/README.md and graph_demo.html)
+reports/filter.csv
+reports/filter.html
+reports/graph.html
+reports/recall-*.csv
+reports/recall-*.md
+
 # Local env / secrets
 .env
 .env.local

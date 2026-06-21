@@ -74,37 +74,21 @@ study the queries never returned.
 
 ### 🧱 Retrieval engine
 
-Retrieval is plain keyword search, tuned so a known refutation actually comes back, and built to
-stay cheap as the corpus grows. Three pieces matter (`transformation/query.py`,
-`scraping/pubmed.py`, `scraping/querycache.py`):
+Retrieval is plain keyword search, tuned so a known refutation actually comes back and kept cheap
+as the corpus grows (`transformation/query.py`, `scraping/pubmed.py`, `scraping/querycache.py`):
 
-- **Query ladder, not one rigid query.** Each claim becomes three PubMed rungs whose results are
-  unioned: a loose `core` rung (intervention + outcome), a `high-tier` rung that filters to the
-  publication types that overturn consensus (meta-analysis, systematic review, randomised trial,
-  guideline), and a contradiction-seeking rung (`risk`, `harm`, `no benefit`, ...). Europe PMC
-  mirrors the core and high-tier rungs. Terms are passed **unquoted** and stripped of parenthetical
-  annotations first, because quoting a long phrase forces an exact-string match that descriptive
-  claim text almost never satisfies. A per-rung contribution check on the gold slice set the rung
-  count: `core` and `high-tier` each recover every answer key a wider set did, so extra rungs were
-  dropped to keep the query count (and retrieval time) per claim low.
-- **Batched fetch.** A claim's unioned PMIDs are fetched in batches (`efetch`, 150 per request) so a
-  large pool cannot overflow the request URL (NCBI returns HTTP 414 for long URLs).
-- **Source resilience.** The two evidence sources are queried independently, so if one (say Europe
-  PMC) is temporarily down, the filter falls back to the other rather than failing the whole paper
-  to `unverified`.
-- **DuckDB query cache (opt-in).** Across a large corpus the same claim recurs constantly and
-  normalizes to the same search. With `MEDFACT_QUERY_CACHE` set to a file path (or `1` for the
-  default `data/cache/query_cache.duckdb`), retrieval is **cache-first**: it looks in DuckDB before
-  every call and only touches the PubMed or Europe PMC API on a miss, writing the result back so the
-  next paper that needs it is served from disk. Two things are cached, so a study seen once is
-  neither searched nor fetched again: a `query_results` table maps `(source, query, page_size)` to
-  its hits, and a `records` table maps a study id to its fetched title/abstract/publication types.
-  A distinct query and a distinct study each hit the network only once for the whole corpus. The
-  cache is thread-safe (the filter and harness fan papers out across threads) and fails open: if the
-  file cannot be opened, retrieval just runs live instead of aborting. Leaving the variable unset
-  preserves live-every-time behaviour. This is separate from the validation tool's own DuckDB store
-  (`store.py`), which caches candidates, embeddings, and stance for repeatable offline
-  `medfact-run --use-cache` scoring.
+- **Several searches per claim, not one.** Each claim runs a few searches whose results are
+  combined: a broad one (the intervention and the outcome), one limited to strong study types
+  (meta-analyses, systematic reviews, randomised trials, guidelines), and one that looks for
+  contradiction (terms like `risk`, `harm`, `no benefit`). Search terms are sent unquoted, because
+  quoting a long phrase demands an exact match that real claim text rarely meets.
+- **Two sources, queried independently.** PubMed and Europe PMC are searched separately, so if one
+  is temporarily down the filter still gets results from the other instead of giving up on the
+  paper.
+- **Optional cache.** Across a large corpus the same searches repeat. Set `MEDFACT_QUERY_CACHE` to
+  a file path and the filter checks that file before each call, only hitting the network on a miss
+  and saving the result for next time. So a given search and a given study are fetched once for the
+  whole corpus. Leave it unset to always search live.
 
 ### 💵 What it costs
 
