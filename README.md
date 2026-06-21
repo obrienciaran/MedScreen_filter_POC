@@ -34,7 +34,7 @@ keeps, down-weights, or drops papers based on that table. The filter can also dr
 graph as an optional visual aid over the same data (see [Visualization](#-visualization-optional)),
 but the table is the product.
 
-<img width="1199" height="254" alt="Screenshot 2026-06-21 at 20 25 02" src="https://github.com/user-attachments/assets/2f11ed63-a9fa-4ef5-9717-08622e2019e3" />
+<img width="1199" height="279" alt="Screenshot 2026-06-21 at 20 25 29" src="https://github.com/user-attachments/assets/8ec9ed89-82d9-4dc7-a768-a57945c77b06" />
 
 ## 🛠️ How it works
 
