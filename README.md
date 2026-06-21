@@ -1,6 +1,6 @@
 # MedFact_POC — Evidence-Grounded Truth Filter for Medical Papers
 
-## What this is
+## 🎉 What this is
 
 A proof of concept for a **truth-based data quality filter for medical training
 data**. Point it at a corpus of PubMed medical papers in XML format and it produces a
@@ -39,7 +39,7 @@ whole proposed approach rests on. That is to check if the filter has the ability
 wrong claim. If retrieval cannot find the contradicting evidence, the filter would look reliable on famous topics, where the evidence is
 easy to find, and be quietly wrong on rarer ones, where it is hard to find.
 
-## What it produces
+## ➡️ What it produces
 
 Running the filter writes `reports/filter.csv`, one row per paper:
 
@@ -53,7 +53,7 @@ draw is an optional visual aid over the same data, not the product.
 
 <img width="1174" height="388" alt="Screenshot 2026-06-21 at 03 48 03" src="https://github.com/user-attachments/assets/57568d0c-4dd7-47e9-a5db-6f6889f573a9" />
 
-## How it works
+## 🛠️ How it works
 
 The filter takes a directory of PubMed XML papers and processes **each paper on its own**. It
 does not compare papers against each other and there is no pairwise cross-check. A paper is judged
@@ -74,7 +74,7 @@ For one paper the steps are:
 
 The result is one row per paper in `reports/filter.csv`.
 
-### How evidence is found
+### 🔎 How evidence is found
 
 The evidence is not in your corpus, and there is no local copy of the medical literature. **The
 database search happens on PubMed's and Europe PMC's own servers, not here.** For each claim
@@ -95,7 +95,7 @@ similarity (`transformation/semantic.py`) appear only in the *validation test*, 
 already-fetched pool to measure how near the top the disproving study lands (recall@k).
 Re-ranking cannot recover a study the API queries never returned.
 
-### What it costs
+### 💵 What it costs
 
 The expense is dominated by network calls (PubMed/Europe PMC search and fetch) and LLM calls
 (one extraction per paper, plus one stance judgement per candidate study per claim). Papers run
@@ -110,7 +110,7 @@ stub backends with no network and no LLM, for checking the plumbing before spend
 > use. Treat every result here as an early demonstration of the idea, not a reliable data
 > filtering tool yet.
 
-## Doesn't this exist already?
+## 🤔 Doesn't this exist already?
 
 Two simpler ideas sound like they would do the same job. Neither does.
 
@@ -127,14 +127,14 @@ done. To count them you must first *find* the study that refutes each claim and 
 does, which is what this POC tests rather than takes for granted. You cannot count
 refutations you cannot find.
 
-## Where the language model fits
+## 🤖 Where the language model fits
 
 The language model has a deliberately bounded role. It does two jobs. It extracts each claim
 from a paper's text, and it judges whether a retrieved study refutes or supports that claim.
 It does not run the search, decide which papers are kept or dropped, or score a paper on its
 own, those follow from the retrieved evidence and its tier.
 
-## How a paper is scored
+## 📄 How a paper is scored
 
 Scoring is mechanical and evidence-driven, not a model opinion. It runs per claim, then rolls
 up to the paper. The thresholds all live in `transformation/scoring.py`.
@@ -159,7 +159,7 @@ up to the paper. The thresholds all live in `transformation/scoring.py`.
 The continuous score sits next to the verdict in the table, so a curator can set a stricter or
 looser cutoff than the default actions.
 
-## Validation: can the search find the evidence?
+## ❓ Validation: can the search find the evidence?
 
 The filter is only as good as its search. If the search cannot find the study that contradicts
 a wrong claim, the filter cannot catch that claim. Everything rests on this one step, so a
@@ -215,7 +215,7 @@ the filter's own per-paper table (`reports/filter.csv`). If retrieval recall is 
 claim-scoring filter is confident about well-known cases and silently wrong about everything
 that is under-indexed.
 
-## Setup
+## ⚙️ Setup
 
 ```bash
 uv venv --python 3.12
@@ -237,7 +237,7 @@ export NCBI_EMAIL=you@org.com  # polite identification for E-utilities
 export GEMINI_API_KEY=...      # or ANTHROPIC_API_KEY / OPENAI_API_KEY
 ```
 
-## Run the filter
+## 🏃 Run the filter
 
 ```bash
 # Offline, synthetic (stub) backends — no key needed:
@@ -270,7 +270,7 @@ read or that is not a PubMed article set, and it prints a highlight for a paper 
 `CommentsCorrectionsList`, which is the offline truthfulness signal. During live retrieval the
 filter also queries Europe PMC as a second evidence source. That is retrieval, not input.
 
-## Run the validation
+## 🏃 Run the validation
 
 ```bash
 medfact-build-cache      # fetch candidate evidence for the gold set into DuckDB
@@ -295,7 +295,7 @@ MEDFACT_EMBED_BACKEND=sbert MEDFACT_STANCE_BACKEND=llm MEDFACT_LLM_PROVIDER=gemi
 `MEDFACT_EMBED_BACKEND=sbert` needs the `embed` extra installed (see Setup); without it the
 recall numbers come from the stub backends and are not a real measurement.
 
-## Visualization (optional)
+## 🌀 Visualization (optional)
 
 The graph is a secondary aid. `medfact-graph` renders a validation run to a
 self-contained, interactive page (`reports/graph.html`); the page header explains how to read
@@ -304,7 +304,7 @@ summary, a legend, edge-type filters, a "recall gaps only" view, and hover/click
 filter draws the same kind of graph for its own results at `reports/filter.html`. Run
 `medfact-run` (or `medfact-filter`) first so there is data to draw.
 
-## Roadmap
+## 🛣️ Roadmap
 
 Not built yet: GRADE-based evidence weighting, feeding the verdicts into training weights,
 UMLS concept grounding, approximate-nearest-neighbour indexing for faster search at scale, and
