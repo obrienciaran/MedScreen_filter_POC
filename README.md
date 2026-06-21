@@ -200,13 +200,10 @@ validate the search only, separate from the filter's own per-paper table (`repor
 > reaches the pool the model recognises it as refuting every time (stance recall is 100%
 > conditional on retrieval), so retrieval is the sole remaining bottleneck. The two misses are
 > `not_indexed`: the 1984 Marshall & Warren ulcer paper and the NICE-SUGAR glycaemic-control
-> trial, both of which need MeSH-based queries or alias expansion to surface. An earlier run
-> scored 40% recall and a 62% false-contradiction rate; both numbers improved once query
-> construction stopped forcing exact-phrase matches and switched to a small loose-to-targeted
-> query ladder (`transformation/query.py`); retrieval recall held at 80% after the ladder was
-> trimmed to its three highest-yield rungs. Retrieval recall is deterministic; the
+> trial, both of which need MeSH-based queries or alias expansion to surface. Retrieval recall is deterministic; the
 > false-contradiction rate varies run to run (seen between 12% and 25%) because the stance judge
-> is mildly non-deterministic on one or two borderline controls.
+> is mildly non-deterministic on one or two borderline controls. Gemini 2.5 Flash Lite was used however so a more intelligent
+> model will improve the false contradiction rate.
 
 ## ⚙️ Setup
 
