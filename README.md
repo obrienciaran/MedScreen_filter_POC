@@ -6,7 +6,7 @@ A proof of concept for a **LLM powered, evidence-based, data quality filter for 
 at a corpus of PubMed papers in XML format and it produces a flat table, one row per paper,
 judging whether the paper's claims hold up against trusted medical evidence.
 
-The point is to filter on *truth*, not on surface features. Existing approaches judge a paper by
+The point is to filter on truth, not on surface features. Existing approaches judge a paper by
 how it looks, not whether it is right:
 
 - **Rule-based filters** catch gibberish and spam, but a well-formed false claim passes through.
@@ -16,11 +16,10 @@ how it looks, not whether it is right:
 - **LLM rating** rewards fluency and coherence, exactly what confident misinformation imitates best.
 
 None of these ask "is this true?" This filter does. It pulls out each claim and checks it against
-the evidence, so the verdict is *discovered*, not guessed from how the paper reads.
+the evidence, so the verdict is discovered, not guessed from how the paper reads.
 
-This is a POC. It tests the one dependency the whole approach rests on: can retrieval *find* the
-evidence that contradicts a wrong claim? If it can't, the filter looks reliable on famous topics
-(where evidence is easy to find) and is quietly wrong on rarer ones.
+This is a POC. It tests the one dependency the whole approach rests on. Can retrieval *find* the
+evidence that contradicts a wrong claim?
 
 ## ➡️ What it produces
 
@@ -65,10 +64,10 @@ those matches with any dispute links from the paper's own XML, then fetches each
 abstract and publication type, giving a small per-claim candidate pool.
 
 The queries deliberately seek out contradicting, high-tier evidence, but whether they succeed is
-not assumed — that is the exact thing this POC measures (retrieval recall), since a query that
+not assumed. That is the exact thing this POC measures (retrieval recall), since a query that
 misses the right terms is the project's central failure mode. A miss is tagged `entity_miss` (the
 query missed the claim's terms) or `not_indexed` (no query or source returned the study). This is
-**not** a vector search over all of PubMed: embeddings and cosine similarity
+**not** a vector search over all of PubMed. Eembeddings and cosine similarity are used
 (`transformation/semantic.py`) only re-rank an already-fetched pool, in the validation test, to
 measure how near the top the disproving study lands (`recall@k`). Re-ranking cannot recover a
 study the queries never returned.
@@ -91,7 +90,7 @@ Two simpler ideas sound like they would do the same job. Neither does.
 **Why not trust well-cited sources?** Reputation (citation count, H-index, journal prestige)
 judges who is speaking, not whether what they say is true. The hormone-replacement-therapy belief
 was highly cited the entire time it was wrong, and reputation has the same blind spot as fame
-generally: well-known work is easy to check, obscure-but-correct work is not.
+generally; well-known work is easy to check, obscure-but-correct work is not.
 
 **Why not just count refuted claims?** That assumes the hard part, finding the study that refutes
 each claim and confirming it does, is already done. This POC tests that step rather than taking
@@ -99,10 +98,10 @@ it for granted; you cannot count refutations you cannot find.
 
 ## 🤖 Where the language model fits
 
-The language model has a deliberately bounded role. It does two jobs: it extracts each claim
+The language model has a deliberately bounded role. It does two jobs. It extracts each claim
 from a paper's text, and it judges whether a retrieved study refutes or supports that claim. It
-does not run the search, decide which papers are kept or dropped, or score a paper on its own —
-those follow from the retrieved evidence and its tier.
+does not run the search, decide which papers are kept or dropped, or score a paper on its own.
+Those follow from the retrieved evidence and its tier.
 
 ## 📄 How a paper is scored
 
@@ -133,7 +132,7 @@ looser cutoff than the default actions.
 
 ## ❓ Validation: can the search find the evidence?
 
-The filter is only as good as its search: if it cannot find the study that contradicts a wrong
+The filter is only as good as its search. If it cannot find the study that contradicts a wrong
 claim, it cannot catch that claim. A separate validation test (`medfact-run`) checks this one
 step on its own, using claims the field already knows were wrong, where the disproving study is
 recorded in advance. It runs the filter's search over those claims and checks how often it finds
