@@ -294,7 +294,7 @@ edge-type filters, a "recall gaps only" view, and hover/click focus. The filter 
 kind of graph for its own results at `reports/filter.html`. Run `medfact-run` (or
 `medfact-filter`) first so there is data to draw.
 
-<img width="1501" height="776" alt="Screenshot 2026-06-21 at 03 45 19" src="https://github.com/user-attachments/assets/e221edca-404a-47de-abb0-a8157dade899" />
+<img width="1499" height="768" alt="Screenshot 2026-06-21 at 20 26 35" src="https://github.com/user-attachments/assets/e0018172-eb28-4b29-b49c-bbc18d825967" />
 
 ## 🛣️ Roadmap
 
