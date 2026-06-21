@@ -12,6 +12,9 @@ The point is to filter on *truth*, not on surface features — and that is what 
 apart from every existing kind of quality filter, because all of them judge a paper by
 how it looks rather than whether it is right:
 
+<img width="1501" height="776" alt="Screenshot 2026-06-21 at 03 45 19" src="https://github.com/user-attachments/assets/e221edca-404a-47de-abb0-a8157dade899" />
+
+
 - **Rule-based filters** check form such as length, punctuation, repetition, language. They
   strip out gibberish and spam, but well-formed false claims pass through.
 - **Quality classifiers** are trained to favour text that resembles a trusted reference
