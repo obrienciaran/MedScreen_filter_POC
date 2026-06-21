@@ -102,9 +102,8 @@ The expense is dominated by network calls (PubMed/Europe PMC search and fetch) a
 concurrently (`MEDFACT_FILTER_CONCURRENCY`, default 4). The whole pipeline also runs offline on
 stub backends with no network and no LLM, for checking the plumbing before spending anything.
 
-> **Status: this is a proof of concept (POC) for a data filter, not a finished product.** The
-> goal is a truth-based data quality filter for medical training data. As an early test, the
-> filter was run on a small batch of just 10 PubMed papers using Google's Gemini 2.5 Flash Lite
+> **Status: this is a proof of concept (POC) for a data filter, not yet a finished tool.**
+> As an early test, the filter was run on a small batch of just 10 PubMed papers using Google's Gemini 2.5 Flash Lite.
 > model. It has **not** been tested on a large or varied dataset of PubMed XML files, and the
 > query construction, retrieval, and scoring all need further refinement before any production
 > use. Treat every result here as an early demonstration of the idea, not a reliable data
