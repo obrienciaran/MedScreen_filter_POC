@@ -2,7 +2,7 @@
 
 ## What this is
 
-A proof of concept for a **truth-based data quality filter for medical training data**. Point it
+A proof of concept for a **LLM powered, evidence-based, data quality filter for medical training data**. Point it
 at a corpus of PubMed papers in XML format and it produces a flat table, one row per paper,
 judging whether the paper's claims hold up against trusted medical evidence.
 
