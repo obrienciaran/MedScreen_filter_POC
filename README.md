@@ -36,8 +36,7 @@ exposes a wrong paper is the contradicting evidence itself.
 
 This is a POC. It runs on a small curated slice and tests the one dependency the
 whole proposed approach rests on. That is to check if the filter has the ability to *find* the evidence that contradicts a
-wrong claim. We call this a "harness". If retrieval cannot find the
-contradicting evidence, the filter would look reliable on famous topics, where the evidence is
+wrong claim. If retrieval cannot find the contradicting evidence, the filter would look reliable on famous topics, where the evidence is
 easy to find, and be quietly wrong on rarer ones, where it is hard to find.
 
 ## What it produces
@@ -57,7 +56,7 @@ draw is an optional visual aid over the same data, not the product.
 ## How it works
 
 The filter takes a directory of PubMed XML papers and processes **each paper on its own**. It
-does not compare papers against each other; there is no pairwise cross-check. A paper is judged
+does not compare papers against each other and there is no pairwise cross-check. A paper is judged
 only against external trusted evidence, never against the rest of your corpus, so the cost
 grows linearly with the number of papers, not quadratically.
 
@@ -67,7 +66,7 @@ For one paper the steps are:
    MeSH terms, and any retraction/comment links).
 2. **Extract claims** — an LLM lifts the paper's specific claims out of its text.
 3. **Retrieve evidence** — for each claim, fetch a small set of candidate studies that bear on
-   it (see below). This is the step the harness validates.
+   it (see below). This is the main step this POC validates.
 4. **Judge stance** — an LLM reads each candidate study's title and abstract and labels it as
    supporting, refuting, or neutral toward the claim.
 5. **Score** — weigh those labels by evidence tier into a per-claim verdict, then take the
@@ -84,12 +83,12 @@ the PubMed E-utilities and Europe PMC REST search endpoints. Their search engine
 full databases and return only the matching study IDs, already ranked by relevance and capped
 at a small limit (default 20 per query). The filter unions those matches with any dispute links
 from the paper's own XML, then fetches each candidate's abstract and publication type. The
-result is a small per-claim candidate pool, a few dozen studies, not the whole database.
+result is a small per-claim candidate pool, a few dozen studies.
 
 The queries deliberately include contradiction-seeking and high-tier formulations. **Whether
-they actually surface the disproving study is not assumed — it is the exact thing the harness
-measures (retrieval recall), because a boolean query that misses the right terms is this
-project's central failure mode.** When a query fails the harness tags it `entity_miss` (the
+they actually surface the disproving study is not assumed. This is the exact thing this POC is
+measuring (retrieval recall), because a boolean query that misses the right terms is this
+project's central failure mode.** When a query fails the tags it `entity_miss` (the
 query missed the claim's terms) or `not_indexed` (no query or source returned the study). This
 is **not** a vector search over all of PubMed; no such index exists here. Embeddings and cosine
 similarity (`transformation/semantic.py`) appear only in the *harness*, where they re-rank an
@@ -104,7 +103,7 @@ concurrently (`MEDFACT_FILTER_CONCURRENCY`, default 4). The whole pipeline also 
 stub backends with no network and no LLM, for checking the plumbing before spending anything.
 
 > **Status: this is a proof of concept, not a finished filter.** The goal is a truth-based data
-> quality filter for medical training data. The code here demonstrates that the approach is
+> quality filter for medical training data. Again, this is a POC. The code here demonstrates that the approach is
 > viable on a small curated slice; it has not been tuned or validated at scale, and the query
 > construction, retrieval, and scoring all need further refinement before production use. Treat
 > every result as an early capability demonstration, not a reliable data filtering tool.
@@ -162,7 +161,7 @@ looser cutoff than the default actions.
 
 The filter is only as good as its search. If the search cannot find the study that contradicts
 a wrong claim, the filter cannot catch that claim. Everything rests on this one step, so a
-**harness** (`medfact-run`) tests it on its own.
+harness (`medfact-run`) tests it on its own.
 
 The test is simple. We take a set of claims the field already knows were wrong, where the study
 that disproved each one is written down in advance. We run the filter's search over those
@@ -170,9 +169,9 @@ claims and check how often it brings the known disproving study back. This is th
 concept: a small, hand-curated check that the search works on cases where we already know the
 answer.
 
-> This is an experimental proof-of-concept project. It has not been run on a wider dataset.
+> Oncemore, this is an experimental proof-of-concept project. It has not been run on a wider dataset.
 
-The search runs in two steps, and the harness scores each step separately so that when
+The search runs in two steps, and scores each step separately so that when
 something goes wrong you can tell which step broke:
 
 1. **Fetch** — did the search pull the disproving study back at all?
@@ -267,7 +266,7 @@ read or that is not a PubMed article set, and it prints a highlight for a paper 
 `CommentsCorrectionsList`, which is the offline truthfulness signal. During live retrieval the
 filter also queries Europe PMC as a second evidence source. That is retrieval, not input.
 
-## Run the harness
+## Run the validation
 
 ```bash
 medfact-build-cache      # fetch candidate evidence for the gold set into DuckDB
@@ -278,7 +277,7 @@ pytest                   # unit tests (network tests are opt-in: pytest -m live)
 
 ## Visualization (optional)
 
-The graph is a secondary aid. `medfact-graph` renders a harness run to a
+The graph is a secondary aid. `medfact-graph` renders a validation run to a
 self-contained, interactive page (`reports/graph.html`); the page header explains how to read
 it (claims as boxes, retrieved studies as dots, line colour for stance), and it adds a
 summary, a legend, edge-type filters, a "recall gaps only" view, and hover/click focus. The
