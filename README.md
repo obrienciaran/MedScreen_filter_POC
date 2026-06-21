@@ -36,8 +36,7 @@ exposes a wrong paper is the contradicting evidence itself.
 
 This is a POC. It runs on a small curated slice and tests the one dependency the
 whole proposed approach rests on. That is to check if the filter has the ability to *find* the evidence that contradicts a
-wrong claim. We call this a "harness".
-[Validation](#validation-does-the-search-find-the-evidence). If retrieval cannot find the
+wrong claim. We call this a "harness". If retrieval cannot find the
 contradicting evidence, the filter would look reliable on famous topics, where the evidence is
 easy to find, and be quietly wrong on rarer ones, where it is hard to find.
 
