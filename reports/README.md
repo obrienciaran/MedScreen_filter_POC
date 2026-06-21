@@ -56,13 +56,13 @@ so you can set your own threshold instead of relying on these defaults.
 ### `score`
 
 `score` is continuous truthfulness, not a probability. Per claim it is
-`0.5 + 0.4 × support_strength − 0.8 × refute_strength`, clamped to `0..1`, where each strength
+`0.5 + 0.4 × support_strength − 0.8 × refute_strength`, clamped to `0 - 1`, where each strength
 is the stance confidence weighted by the evidence tier of the study making that point. The
 paper's score is the **minimum** across its claims (its weakest, most-refuted claim).
 
 ### `top_refuting_tier` and the evidence tiers
 
-The tier is a coarse, GRADE-flavoured weight read from a study's publication type. It exists
+The tier is a coarse, GRADE-type weight read from a study's publication type. It exists
 so a high-tier refutation outweighs low-tier support; it is not a precise scoring instrument.
 
 | tier | publication type |
