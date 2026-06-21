@@ -9,11 +9,12 @@ checked into the repo.
 ### Files from the filter (`medfact-filter`, the data quality filter)
 
 - `filter.csv` — the per-paper truthfulness table, one row per paper. Columns are documented
-  below. This is the filter's real output, regenerated on every run.
+  below. This is a real run and the filter's real output (i.e. not the validation run on our gold standard curated dataset),
+  regenerated on every run.
 - `filter.html` — the same run drawn as an interactive evidence graph. One node per paper,
   coloured by its truthfulness verdict. A visual aid over the same data in `filter.csv`.
 
-### Files from the validation tool (`medfact-run`, the recall check)
+### Files from the validation tool (`medfact-run`, the recall check, on the gold standard curated dataset)
 
 - `recall-<timestamp>.md` / `recall-<timestamp>.csv` — how often the search found the known
   disproving study on the gold slice. These are retrieval-recall metrics, not per-paper
