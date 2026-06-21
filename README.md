@@ -53,6 +53,8 @@ Every column is documented in [`reports/README.md`](reports/README.md). Downstre
 keeps, down-weights, or drops papers from that table. The evidence graph the filter can also
 draw is an optional visual aid over the same data, not the product.
 
+<img width="1178" height="380" alt="Screenshot 2026-06-21 at 03 46 35" src="https://github.com/user-attachments/assets/bb9e0bf5-3250-40f8-b912-4ab5978d0dd4" />
+
 ## How it works
 
 The filter takes a directory of PubMed XML papers and processes **each paper on its own**. It
