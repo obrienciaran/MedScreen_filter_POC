@@ -78,7 +78,7 @@ Retrieval is plain keyword search, tuned so a known refutation actually comes ba
 as the corpus grows (`transformation/query.py`, `scraping/pubmed.py`, `scraping/querycache.py`):
 
 - **Several searches per claim, not one.** Each claim runs a few searches whose results are
-  combined: a broad one (the intervention and the outcome), one limited to strong study types
+  combined. A broad one (the intervention and the outcome), one limited to strong study types
   (meta-analyses, systematic reviews, randomised trials, guidelines), and one that looks for
   contradiction (terms like `risk`, `harm`, `no benefit`). Search terms are sent unquoted, because
   quoting a long phrase demands an exact match that real claim text rarely meets.
@@ -88,7 +88,7 @@ as the corpus grows (`transformation/query.py`, `scraping/pubmed.py`, `scraping/
 - **Optional cache.** Across a large corpus the same searches repeat. Set `MEDFACT_QUERY_CACHE` to
   a file path and the filter checks that file before each call, only hitting the network on a miss
   and saving the result for next time. So a given search and a given study are fetched once for the
-  whole corpus. Leave it unset to always search live.
+  whole corpus. Uses DuckDB. Leave it unset to always search live.
 
 ### 💵 What it costs
 

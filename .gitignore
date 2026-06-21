@@ -18,7 +18,7 @@ reports/graph.html
 reports/recall-*.csv
 reports/recall-*.md
 
-# Local env / secrets
+# Local env/secrets
 .env
 .env.local
 
