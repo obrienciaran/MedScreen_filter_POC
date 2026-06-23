@@ -90,7 +90,7 @@ Scoring is mechanical, not a model opinion. Thresholds live in `transformation/s
    the paper, `contested` down-weights it, `supported` and `unverified` keep it. Unverified is
    kept on purpose, since a missing refutation is not proof a claim is false.
 
-## ❓ Validation: can the search find the evidence?
+## ❓ Validation study: can the search find the evidence?
 
 The filter is only as good as its search. A separate test (`medfact-run`) checks that one step
 using claims the field already knows were wrong, where the disproving study is recorded in
