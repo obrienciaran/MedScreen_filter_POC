@@ -61,11 +61,11 @@ candidate's abstract and publication type.
 
 Retrieval is tuned so a known refutation actually comes back:
 
-- Several searches per claim — a broad one (intervention + outcome), one limited to strong study
+- Several searches per claim: a broad one (intervention + outcome), one limited to strong study
   types (meta-analyses, reviews, RCTs, guidelines), and one looking for contradiction (`risk`,
-  `harm`, `no benefit`). Terms are unquoted, since exact-phrase matching rarely fits claim text.
-- Two sources queried independently, so one being down doesn't lose the paper.
-- Optional cache — set `MEDFACT_QUERY_CACHE` to a file path (DuckDB) to fetch repeated searches
+  `harm`, `no benefit`).
+- Two sources queried independently.
+- Optional cache: set `MEDFACT_QUERY_CACHE` to a file path (DuckDB) to fetch repeated searches
   once across a corpus. Unset to always search live.
 
 Embeddings (`transformation/semantic.py`) are used only to re-rank an already-fetched pool during
@@ -97,11 +97,11 @@ using claims the field already knows were wrong, where the disproving study is r
 advance. It runs the filter's search and checks how often it finds the known study, scored in two
 stages so a failure traces to the right one:
 
-- Retrieval recall — of the disproving studies that exist, the fraction the search pulled back.
+- Retrieval recall: of the disproving studies that exist, the fraction the search pulled back.
   Model-independent. The headline number.
-- Stance recall — of those fetched, the fraction the model labelled refuting.
-- Recall@k — retrieval recall within the top k results (k = 1, 5, 10, 20).
-- False-contradiction rate — fraction of still-true controls wrongly flagged refuted (lower is
+- Stance recall: of those fetched, the fraction the model labelled refuting.
+- Recall@k: retrieval recall within the top k results (k = 1, 5, 10, 20).
+- False-contradiction rate: fraction of still-true controls wrongly flagged refuted (lower is
   better).
 
 Each miss is tagged with a root cause (`not_indexed`, `entity_miss`, `retrieved_not_recognized`,
