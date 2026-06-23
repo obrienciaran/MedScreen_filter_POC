@@ -13,7 +13,7 @@ reference), which is exactly what confident misinformation imitates best. This f
 pulls out each claim and checks it against the evidence, so the verdict is discovered, not
 guessed.
 
-It is a POC, so it tests the one dependency the approach rests on: can retrieval find the evidence
+It is a POC, so it tests the one dependency the approach rests on; can retrieval find the evidence
 that contradicts a wrong claim?
 
 ## ➡️ What it produces
@@ -35,14 +35,14 @@ product.
 The filter processes each paper on its own, judged only against external trusted evidence, so cost
 grows linearly with the number of papers. For one paper:
 
-1. Ingest — read the PubMed XML into a structured record (claim text, publication type, MeSH
+1. Ingest: read the PubMed XML into a structured record (claim text, publication type, MeSH
    terms, retraction/comment links).
-2. Extract claims — an LLM lifts the paper's specific claims out of its text.
-3. Retrieve evidence — for each claim, fetch a small set of candidate studies that bear on it.
+2. Extract claims: an LLM lifts the paper's specific claims out of its text.
+3. Retrieve evidence: for each claim, fetch a small set of candidate studies that bear on it.
    This is the step the POC validates.
-4. Judge stance — an LLM reads each candidate's title and abstract and labels it supporting,
+4. Judge stance: an LLM reads each candidate's title and abstract and labels it supporting,
    refuting, or neutral toward the claim.
-5. Score — weigh those labels by evidence tier into a per-claim verdict, then take the paper's
+5. Score: weigh those labels by evidence tier into a per-claim verdict, then take the paper's
    worst claim as its verdict (see below).
 
 The whole pipeline also runs offline on stub backends (no network, no LLM) so you can check the
