@@ -10,7 +10,7 @@ them to every later paper, so each unique unit of work hits the network only onc
   * ``records`` maps a study id to its fetched record (title, abstract, publication types).
 
 Both are checked first; the PubMed or Europe PMC API is called only on a miss, and the result is
-then written back. It is opt-in: set ``MEDFACT_QUERY_CACHE`` to a file path (or to ``1``/``on``
+then written back. It is opt-in: set ``MEDSCREEN_QUERY_CACHE`` to a file path (or to ``1``/``on``
 for the default path) to enable it; leave it unset to fetch live every time, preserving the
 existing behaviour of a no-cache run. Access is guarded by a lock because the filter and harness
 fan papers out across threads, while the network call itself runs outside the lock.
@@ -97,7 +97,7 @@ class QueryCache:
 
 
 def get_query_cache() -> QueryCache | None:
-    """Return the shared cache if ``MEDFACT_QUERY_CACHE`` enables it, else ``None``.
+    """Return the shared cache if ``MEDSCREEN_QUERY_CACHE`` enables it, else ``None``.
 
     Resolved once per process. If the cache file cannot be opened, caching is disabled rather
     than failing the run.
@@ -108,7 +108,7 @@ def get_query_cache() -> QueryCache | None:
     with _lock:
         if _resolved:
             return _cache
-        setting = os.environ.get("MEDFACT_QUERY_CACHE", "").strip()
+        setting = os.environ.get("MEDSCREEN_QUERY_CACHE", "").strip()
         if setting and setting.lower() not in {"0", "off", "false", "no"}:
             path = DEFAULT_PATH if setting.lower() in {"1", "on", "true", "yes"} else setting
             try:

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MedFact Evidence Graph</title>
+<title>MedScreen Evidence Graph</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <style>
@@ -55,7 +55,7 @@
 <body>
 <div id="app">
   <header>
-    <h1>MedFact Filter Results</h1>
+    <h1>MedScreen Filter Results</h1>
     <p>Each node is a PubMed paper coloured by its truthfulness verdict. Red dots and edges mark works that refuted it; green dots and edges mark works that supported it.</p>
     <p class="how">What this shows: the filter deciding whether each paper is trustworthy. Papers arrive as PubMed files. For each paper, the filter first reads the abstract and pulls out the claim it makes. It then gathers evidence on that claim from two places: the paper's own correction and retraction links, and a search of trusted medical literature. It reads how each study it gathered relates to the claim, whether it disproves it, supports it, or neither. Each box is a paper, coloured by the verdict that results. A red dot joined by a red line is a study that disproved the paper; a study that supported it is joined by a green line. Studies judged neutral are left off to keep the picture readable. The verdict tells downstream training to keep, down-weight, or drop the paper, and it is computed from the gathered evidence and how strong that evidence is. A language model is used in only two narrow places, to pull the claim out of the abstract and to judge each study's stance. It does not make the keep, down-weight or drop decision and it does not score the paper on its own.</p>
   </header>

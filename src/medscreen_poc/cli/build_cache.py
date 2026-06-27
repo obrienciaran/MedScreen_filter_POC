@@ -1,6 +1,6 @@
 """Pre-fetch candidate evidence for the gold set into DuckDB.
 
-Running this first lets ``medfact-run`` operate offline (``--use-cache``) and keeps
+Running this first lets ``medscreen-run`` operate offline (``--use-cache``) and keeps
 expensive API calls out of the measurement loop.
 """
 

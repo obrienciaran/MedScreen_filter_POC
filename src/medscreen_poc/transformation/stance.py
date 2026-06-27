@@ -118,7 +118,7 @@ class LLMStance:
 
 
 def get_stance_backend() -> StanceBackend:
-    backend = os.environ.get("MEDFACT_STANCE_BACKEND", "stub").lower()
+    backend = os.environ.get("MEDSCREEN_STANCE_BACKEND", "stub").lower()
     if backend == "stub":
         return StubStance()
     provider = backend if backend in PROVIDERS else None
@@ -134,12 +134,12 @@ def classify_batch(
     """Classify candidates concurrently, preserving input order.
 
     Stance calls against an LLM backend are independent network-bound requests, so they fan
-    out across a thread pool (``MEDFACT_STANCE_CONCURRENCY``, default 8). The stub backend
+    out across a thread pool (``MEDSCREEN_STANCE_CONCURRENCY``, default 8). The stub backend
     runs through the same path harmlessly.
     """
     if not candidates:
         return []
-    workers = max_workers or int(os.environ.get("MEDFACT_STANCE_CONCURRENCY", "8"))
+    workers = max_workers or int(os.environ.get("MEDSCREEN_STANCE_CONCURRENCY", "8"))
     workers = max(1, min(workers, len(candidates)))
 
     def _classify(c: Candidate) -> StanceLabel:

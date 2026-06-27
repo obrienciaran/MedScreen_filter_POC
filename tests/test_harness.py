@@ -1,8 +1,8 @@
 import pytest
 
-from medfact_poc.orchestration import harness
-from medfact_poc.transformation.semantic import StubEmbedder
-from medfact_poc.schema import (
+from medscreen_poc.orchestration import harness
+from medscreen_poc.transformation.semantic import StubEmbedder
+from medscreen_poc.schema import (
     Candidate,
     ClaimStatus,
     FailureBucket,
@@ -11,8 +11,8 @@ from medfact_poc.schema import (
     Stance,
     StanceLabel,
 )
-from medfact_poc.transformation.stance import StubStance
-from medfact_poc.store import Store
+from medscreen_poc.transformation.stance import StubStance
+from medscreen_poc.store import Store
 
 
 def _gold(status=ClaimStatus.REVERSED, answer_key=("A",)):

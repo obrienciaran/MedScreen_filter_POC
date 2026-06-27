@@ -1,7 +1,7 @@
 import math
 
-from medfact_poc.reporting.metrics import compute
-from medfact_poc.schema import ClaimReport, ClaimStatus, FailureBucket
+from medscreen_poc.reporting.metrics import compute
+from medscreen_poc.schema import ClaimReport, ClaimStatus, FailureBucket
 
 
 def _rev(**kw):

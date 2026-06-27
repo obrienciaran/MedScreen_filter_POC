@@ -1,9 +1,9 @@
 from pathlib import Path
 
-from medfact_poc.orchestration.pipeline import run_filter
-from medfact_poc.reporting.graph import build_paper_graph_data, render_html
-from medfact_poc.transformation.ingest import parse_pubmed_xml
-from medfact_poc.schema import Action, Verdict
+from medscreen_poc.orchestration.pipeline import run_filter
+from medscreen_poc.reporting.graph import build_paper_graph_data, render_html
+from medscreen_poc.transformation.ingest import parse_pubmed_xml
+from medscreen_poc.schema import Action, Verdict
 
 FIXTURE = Path(__file__).parent / "fixtures" / "efetch_sample.xml"
 

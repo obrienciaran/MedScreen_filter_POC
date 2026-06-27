@@ -3,13 +3,13 @@
 Point it at a directory of PubMed/MEDLINE XML files and it writes a flat CSV (one row per
 paper: identifier, verdict, score, action, metadata) plus an interactive HTML graph.
 
-    medfact-filter --input data/pubmed_xml # offline stub backends
-    MEDFACT_LLM_PROVIDER=gemini MEDFACT_EXTRACT_BACKEND=llm \
-        MEDFACT_STANCE_BACKEND=llm MEDFACT_RETRIEVER=live \
-        medfact-filter --input data/pubmed_xml # real backends
+    medscreen-filter --input data/pubmed_xml # offline stub backends
+    MEDSCREEN_LLM_PROVIDER=gemini MEDSCREEN_EXTRACT_BACKEND=llm \
+        MEDSCREEN_STANCE_BACKEND=llm MEDSCREEN_RETRIEVER=live \
+        medscreen-filter --input data/pubmed_xml # real backends
 
 Backends default to deterministic offline stubs, so a run needs no API key. Select real
-providers with MEDFACT_LLM_PROVIDER in {anthropic, openai, gemini} plus the matching key.
+providers with MEDSCREEN_LLM_PROVIDER in {anthropic, openai, gemini} plus the matching key.
 """
 
 from __future__ import annotations
@@ -41,7 +41,7 @@ def main() -> None:
     csv_path = write_flat_csv(verdicts, args.out_csv)
     html_path = render_html(
         build_paper_graph_data(verdicts), args.out_html,
-        title="MedFact Filter Results",
+        title="MedScreen Filter Results",
         subtitle=("Each node is a PubMed paper coloured by its truthfulness verdict. Red dots and "
                 "edges mark works that refuted it; green dots and edges mark works that supported it."),
         how_to_read=FILTER_HOW_TO_READ,

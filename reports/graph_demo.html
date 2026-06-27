@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MedFact — Evidence Graph</title>
+<title>MedScreen — Evidence Graph</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <style>
@@ -55,7 +55,7 @@
 <body>
 <div id="app">
   <header>
-    <h1>MedFact — Evidence Graph</h1>
+    <h1>MedScreen — Evidence Graph</h1>
     <p>Results of the automated search to find the studies that disprove a wrong medical claim. That is the basis of this medical quality filter.</p>
     <p class="how">Each dark blue box is a claim the medical field later overturned. Each green box is a claim that still holds today. For every overturned claim, the system searches the medical literature and we check what it brings back. A plain blue dot is a study the search found. A red dot is a disproving study, found by the search. A yellow triangle is that known disproving study when the search failed to find it. The lines show how each study relates to the claim: red disproves it, green supports it, grey is neither.<br><br>A language model is used in only two narrow places, to extract medical claims from a paper's text; and to judge whether a study disproves or supports it. The LLM does not decide which papers are kept or dropped. In this POC the claims and their known disproving studies here were chosen by hand.</p>
   </header>

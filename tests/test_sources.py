@@ -1,8 +1,8 @@
 import json
 from pathlib import Path
 
-from medfact_poc.schema import Candidate, NormalizedClaim
-from medfact_poc.scraping import europepmc, pubmed
+from medscreen_poc.schema import Candidate, NormalizedClaim
+from medscreen_poc.scraping import europepmc, pubmed
 
 FIX = Path(__file__).parent / "fixtures"
 

@@ -28,7 +28,7 @@ Two ranking backends are available (see ``base.embedder``):
     order is close to random. It lets tests and offline runs work without a network
     connection or a downloaded model.
   * ``sbert`` is a real, pretrained biomedical language model. Turn it on with the
-    ``embed`` optional dependency and ``MEDFACT_EMBED_BACKEND=sbert``.
+    ``embed`` optional dependency and ``MEDSCREEN_EMBED_BACKEND=sbert``.
 """
 
 from __future__ import annotations
@@ -75,10 +75,10 @@ class SentenceTransformerEmbedder:
 
 
 def get_embedder() -> Embedder:
-    backend = os.environ.get("MEDFACT_EMBED_BACKEND", "stub").lower()
+    backend = os.environ.get("MEDSCREEN_EMBED_BACKEND", "stub").lower()
     if backend == "sbert":
         return SentenceTransformerEmbedder(
-            os.environ.get("MEDFACT_EMBED_MODEL", "pritamdeka/S-PubMedBert-MS-MARCO")
+            os.environ.get("MEDSCREEN_EMBED_MODEL", "pritamdeka/S-PubMedBert-MS-MARCO")
         )
     return StubEmbedder()
 

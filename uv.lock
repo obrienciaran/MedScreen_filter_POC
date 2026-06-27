@@ -718,7 +718,7 @@ wheels = [
 ]
 
 [[package]]
-name = "medfact-poc"
+name = "medscreen-poc"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

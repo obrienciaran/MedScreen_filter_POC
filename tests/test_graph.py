@@ -1,5 +1,5 @@
-from medfact_poc.reporting.graph import build_graph_data, render_html
-from medfact_poc.schema import (
+from medscreen_poc.reporting.graph import build_graph_data, render_html
+from medscreen_poc.schema import (
     Candidate,
     ClaimStatus,
     GoldEntry,
@@ -8,7 +8,7 @@ from medfact_poc.schema import (
     Stance,
     StanceLabel,
 )
-from medfact_poc.store import Store
+from medscreen_poc.store import Store
 
 
 def _gold():

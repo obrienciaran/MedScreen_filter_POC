@@ -25,10 +25,10 @@ an error taxonomy showing where retrieval fails. The filter's output is the per-
 
 ### Scope
 
-- The data filter (`medfact-filter`) is the product: ingest PubMed XML, extract claims, retrieve
+- The data filter (`medscreen-filter`) is the product: ingest PubMed XML, extract claims, retrieve
   evidence, judge stance, aggregate to a per-paper verdict, and write a flat CSV plus an
   HTML graph. It runs fully on offline stubs and swaps in real backends via env.
-- `medfact-run` is the validation arm: it measures retrieval recall on the
+- `medscreen-run` is the validation arm: it measures retrieval recall on the
   consensus-reversal gold slice, the dependency the filter's accuracy rests on.
 - PubMed XML only. XML over .txt because it carries the
   CommentsCorrectionsList retraction/comment links, publication types, and MeSH.
@@ -75,7 +75,7 @@ fail, then reports the percentage that pass.
 - Error taxonomy per miss: not_indexed, retrieved_not_recognized, entity_miss,
   condition_mismatch, tier_inversion.
 
-### Architecture (`src/medfact_poc/`)
+### Architecture (`src/medscreen_poc/`)
 
 The package is organised by role. Base classes live in `base/`, network
 fetchers in `scraping/`, data changes in `transformation/`, and output in `reporting/`.
@@ -95,7 +95,7 @@ import the Protocol from here.
 `sources.py` (the `get_sources` registry), `links.py` (pool expansion via PubMed retraction
 links), `evidence.py` (the filter's `Retriever`, where the stub uses the paper's own comment
 and retraction links and the live backend reuses the sources), and `http.py` (shared httpx
-client, rate limiting, TLS handling: `MEDFACT_INSECURE_TLS`, `MEDFACT_CA_BUNDLE`,
+client, rate limiting, TLS handling: `MEDSCREEN_INSECURE_TLS`, `MEDSCREEN_CA_BUNDLE`,
 `NCBI_EMAIL`, `NCBI_API_KEY`).
 
 `transformation/`: `medline.py` (leaf extractors for efetch XML, shared by
@@ -116,7 +116,7 @@ focus).
 `orchestration/` wires the layers together: `harness.py` (the validation arm, with
 failure-bucket assignment) and `pipeline.py` (the data filter itself, scoring papers concurrently).
 
-`cli/`: `medfact-build-cache`, `medfact-run`, `medfact-graph`, and `medfact-filter`.
+`cli/`: `medscreen-build-cache`, `medscreen-run`, `medscreen-graph`, and `medscreen-filter`.
 
 Europe PMC (`scraping/europepmc.py`) is an evidence retrieval source. It is
 queried to find studies that contradict or debate a claim. This data filter is for PubMed XML only.
@@ -127,9 +127,9 @@ read or that is not a PubMed article set, and it prints a highlight for a paper 
 Swappable plug points share the same Protocol shape: `Source`, `Embedder`, `StanceBackend`,
 `ClaimExtractor`, `Retriever`, and `LLMClient`. Each has a dependency-free stub (an offline
 placeholder that fakes the step with no LLM and no network) so the filter and validation tool run
-offline, plus a real backend. Real runs need `MEDFACT_LLM_PROVIDER` in {anthropic, openai,
-gemini}, `MEDFACT_EXTRACT_BACKEND=llm`, `MEDFACT_STANCE_BACKEND=llm`, and
-`MEDFACT_RETRIEVER=live` (and `MEDFACT_EMBED_BACKEND=sbert` for the validation tool). Stub output is a
+offline, plus a real backend. Real runs need `MEDSCREEN_LLM_PROVIDER` in {anthropic, openai,
+gemini}, `MEDSCREEN_EXTRACT_BACKEND=llm`, `MEDSCREEN_STANCE_BACKEND=llm`, and
+`MEDSCREEN_RETRIEVER=live` (and `MEDSCREEN_EMBED_BACKEND=sbert` for the validation tool). Stub output is a
 placeholder, not a real result.
 
 ### Data

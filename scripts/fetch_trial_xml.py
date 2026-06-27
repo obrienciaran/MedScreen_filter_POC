@@ -26,13 +26,13 @@ OUT_DIR = Path("data/trial")
 def _ssl_context() -> ssl.SSLContext | None:
     """Mirror the project's TLS escape hatches for proxied sandboxes.
 
-    MEDFACT_CA_BUNDLE points at a trusted bundle; MEDFACT_INSECURE_TLS=1 disables
+    MEDSCREEN_CA_BUNDLE points at a trusted bundle; MEDSCREEN_INSECURE_TLS=1 disables
     verification entirely (last resort for a self-signed proxy cert).
     """
-    bundle = os.environ.get("MEDFACT_CA_BUNDLE")
+    bundle = os.environ.get("MEDSCREEN_CA_BUNDLE")
     if bundle:
         return ssl.create_default_context(cafile=bundle)
-    if os.environ.get("MEDFACT_INSECURE_TLS") == "1":
+    if os.environ.get("MEDSCREEN_INSECURE_TLS") == "1":
         ctx = ssl.create_default_context()
         ctx.check_hostname = False
         ctx.verify_mode = ssl.CERT_NONE
@@ -53,7 +53,7 @@ TARGET = 10
 
 
 def _params(extra: dict[str, str]) -> dict[str, str]:
-    params = {**extra, "tool": "medfact_poc_trial"}
+    params = {**extra, "tool": "medscreen_poc_trial"}
     email = os.environ.get("NCBI_EMAIL")
     if email:
         params["email"] = email

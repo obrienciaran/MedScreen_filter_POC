@@ -6,7 +6,7 @@ Most files here are **regenerable output and are not committed** (they are liste
 `.gitignore`); rerun the tool to recreate them. Only `README.md` and `graph_demo.html` are
 checked into the repo.
 
-### Files from the filter (`medfact-filter`, the data quality filter)
+### Files from the filter (`medscreen-filter`, the data quality filter)
 
 - `filter.csv` — the per-paper truthfulness table, one row per paper. Columns are documented
   below. This is a real run and the filter's real output (i.e. not the validation run on our gold standard curated dataset),
@@ -14,12 +14,12 @@ checked into the repo.
 - `filter.html` — the same run drawn as an interactive evidence graph. One node per paper,
   coloured by its truthfulness verdict. A visual aid over the same data in `filter.csv`.
 
-### Files from the validation tool (`medfact-run`, the recall check, on the gold standard curated dataset)
+### Files from the validation tool (`medscreen-run`, the recall check, on the gold standard curated dataset)
 
 - `recall-<timestamp>.md` / `recall-<timestamp>.csv` — how often the search found the known
   disproving study on the gold slice. These are retrieval-recall metrics, not per-paper
   verdicts; see the main `README.md`. One pair is written per run, timestamped.
-- `graph.html` — the evidence graph for the validation run (`medfact-graph`). Claims as boxes,
+- `graph.html` — the evidence graph for the validation run (`medscreen-graph`). Claims as boxes,
   retrieved studies as dots, line colour for stance. Written only after a validation run.
 
 ### Checked-in file

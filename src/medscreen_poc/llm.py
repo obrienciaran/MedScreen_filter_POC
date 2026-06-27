@@ -6,9 +6,9 @@ place. The default ``stub`` client returns deterministic canned text, so the who
 runs offline with no key and no cost. Real providers (Anthropic, OpenAI, Gemini) are lazily
 imported only when selected, so none of them is a hard dependency.
 
-Select with ``MEDFACT_LLM_PROVIDER`` in {stub, anthropic, openai, gemini} and, for real
+Select with ``MEDSCREEN_LLM_PROVIDER`` in {stub, anthropic, openai, gemini} and, for real
 providers, the matching API key env var. The model id is overridable with
-``MEDFACT_LLM_MODEL``.
+``MEDSCREEN_LLM_MODEL``.
 """
 
 from __future__ import annotations
@@ -111,16 +111,16 @@ class GeminiLLM:
 
 
 def get_llm(provider: str | None = None) -> LLMClient:
-    """Build an LLM client. ``provider`` overrides ``MEDFACT_LLM_PROVIDER``. Both default to
+    """Build an LLM client. ``provider`` overrides ``MEDSCREEN_LLM_PROVIDER``. Both default to
     the offline stub."""
-    provider = (provider or os.environ.get("MEDFACT_LLM_PROVIDER", "stub")).lower()
+    provider = (provider or os.environ.get("MEDSCREEN_LLM_PROVIDER", "stub")).lower()
     if provider == "stub":
         return StubLLM()
-    model = os.environ.get("MEDFACT_LLM_MODEL", _DEFAULT_MODELS.get(provider, ""))
+    model = os.environ.get("MEDSCREEN_LLM_MODEL", _DEFAULT_MODELS.get(provider, ""))
     if provider == "anthropic":
         return AnthropicLLM(model)
     if provider == "openai":
         return OpenAILLM(model)
     if provider == "gemini":
         return GeminiLLM(model)
-    raise ValueError(f"Unknown MEDFACT_LLM_PROVIDER: {provider}")
+    raise ValueError(f"Unknown MEDSCREEN_LLM_PROVIDER: {provider}")

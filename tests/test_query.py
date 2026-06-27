@@ -1,5 +1,5 @@
-from medfact_poc.transformation import query
-from medfact_poc.schema import NormalizedClaim
+from medscreen_poc.transformation import query
+from medscreen_poc.schema import NormalizedClaim
 
 
 def _claim():

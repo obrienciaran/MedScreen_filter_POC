@@ -1,6 +1,6 @@
-from medfact_poc.schema import Candidate
-from medfact_poc.scraping import pubmed, querycache
-from medfact_poc.scraping.querycache import QueryCache
+from medscreen_poc.schema import Candidate
+from medscreen_poc.scraping import pubmed, querycache
+from medscreen_poc.scraping.querycache import QueryCache
 
 
 def test_query_cache_roundtrip(tmp_path):
@@ -16,7 +16,7 @@ def test_query_cache_roundtrip(tmp_path):
 
 
 def test_get_query_cache_disabled_by_default(monkeypatch):
-    monkeypatch.delenv("MEDFACT_QUERY_CACHE", raising=False)
+    monkeypatch.delenv("MEDSCREEN_QUERY_CACHE", raising=False)
     monkeypatch.setattr(querycache, "_resolved", False)
     monkeypatch.setattr(querycache, "_cache", None)
     assert querycache.get_query_cache() is None

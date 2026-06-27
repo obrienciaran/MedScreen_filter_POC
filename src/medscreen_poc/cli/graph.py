@@ -1,8 +1,8 @@
 """Render the evidence graph from stored run data to an interactive HTML file.
 
-Run ``medfact-run`` first so the store holds stance results, then:
+Run ``medscreen-run`` first so the store holds stance results, then:
 
-    medfact-graph # writes reports/graph.html
+    medscreen-graph # writes reports/graph.html
 """
 
 from __future__ import annotations

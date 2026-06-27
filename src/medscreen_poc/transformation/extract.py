@@ -101,7 +101,7 @@ class LLMExtractor:
 
 def get_extractor() -> ClaimExtractor:
     """Build the configured claim extractor. Defaults to the offline stub."""
-    backend = os.environ.get("MEDFACT_EXTRACT_BACKEND", "stub").lower()
+    backend = os.environ.get("MEDSCREEN_EXTRACT_BACKEND", "stub").lower()
     if backend == "stub":
         return StubExtractor()
     provider = backend if backend in PROVIDERS else None

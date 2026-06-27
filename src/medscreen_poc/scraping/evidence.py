@@ -98,5 +98,5 @@ class LiveRetriever:
 
 def get_retriever() -> Retriever:
     """Build the configured retriever. Defaults to the offline stub."""
-    backend = os.environ.get("MEDFACT_RETRIEVER", "stub").lower()
+    backend = os.environ.get("MEDSCREEN_RETRIEVER", "stub").lower()
     return LiveRetriever() if backend == "live" else StubRetriever()

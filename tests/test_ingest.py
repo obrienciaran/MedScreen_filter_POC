@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from medfact_poc.transformation.ingest import parse_pubmed_xml
+from medscreen_poc.transformation.ingest import parse_pubmed_xml
 
 FIXTURE = Path(__file__).parent / "fixtures" / "efetch_sample.xml"
 

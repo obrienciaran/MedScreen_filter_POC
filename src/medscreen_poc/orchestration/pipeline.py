@@ -81,7 +81,7 @@ def run_filter(
     papers = list(papers)
     if not papers:
         return []
-    workers = max_workers or int(os.environ.get("MEDFACT_FILTER_CONCURRENCY", "4"))
+    workers = max_workers or int(os.environ.get("MEDSCREEN_FILTER_CONCURRENCY", "4"))
     workers = max(1, min(workers, len(papers)))
     with ThreadPoolExecutor(max_workers=workers) as executor:
         return list(

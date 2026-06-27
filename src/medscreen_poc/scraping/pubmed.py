@@ -6,7 +6,7 @@ Three operations:
   * retraction and update links are parsed straight from the efetch XML
     (``CommentsCorrectionsList``), which is simpler and more complete than ELink.
 
-Network calls go through ``medfact_poc.scraping.http`` for rate limiting and TLS
+Network calls go through ``medscreen_poc.scraping.http`` for rate limiting and TLS
 handling.
 """
 

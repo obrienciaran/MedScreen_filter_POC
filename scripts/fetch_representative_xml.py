@@ -6,7 +6,7 @@ retractions. The papers are whatever PubMed returns for each area, not chosen by
 so the run reflects how the filter behaves on typical input (mostly kept).
 
 Uses NCBI E-utilities. No LLM and no API key needed. Set NCBI_EMAIL for politeness, and
-MEDFACT_INSECURE_TLS=1 / MEDFACT_CA_BUNDLE behind a TLS-terminating proxy.
+MEDSCREEN_INSECURE_TLS=1 / MEDSCREEN_CA_BUNDLE behind a TLS-terminating proxy.
 Run: python scripts/fetch_representative_xml.py
 """
 
@@ -41,10 +41,10 @@ TARGET = 10
 
 
 def _ssl_context() -> ssl.SSLContext | None:
-    bundle = os.environ.get("MEDFACT_CA_BUNDLE")
+    bundle = os.environ.get("MEDSCREEN_CA_BUNDLE")
     if bundle:
         return ssl.create_default_context(cafile=bundle)
-    if os.environ.get("MEDFACT_INSECURE_TLS") == "1":
+    if os.environ.get("MEDSCREEN_INSECURE_TLS") == "1":
         ctx = ssl.create_default_context()
         ctx.check_hostname = False
         ctx.verify_mode = ssl.CERT_NONE
@@ -53,7 +53,7 @@ def _ssl_context() -> ssl.SSLContext | None:
 
 
 def _params(extra: dict[str, str]) -> dict[str, str]:
-    params = {**extra, "tool": "medfact_poc_trial"}
+    params = {**extra, "tool": "medscreen_poc_trial"}
     email = os.environ.get("NCBI_EMAIL")
     if email:
         params["email"] = email

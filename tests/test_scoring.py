@@ -1,5 +1,5 @@
-from medfact_poc.transformation.scoring import score_claim, score_paper
-from medfact_poc.schema import (
+from medscreen_poc.transformation.scoring import score_claim, score_paper
+from medscreen_poc.schema import (
     Action,
     Candidate,
     ExtractedClaim,

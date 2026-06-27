@@ -1,7 +1,7 @@
 """Run the recall measurement and write a report.
 
-    medfact-run # live APIs + configured backends
-    medfact-run --use-cache # offline, from a prior medfact-build-cache
+    medscreen-run # live APIs + configured backends
+    medscreen-run --use-cache # offline, from a prior medscreen-build-cache
 """
 
 from __future__ import annotations

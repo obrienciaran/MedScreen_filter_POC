@@ -392,7 +392,7 @@ _STATUS_LABELS = {
     "supported": "Supported paper", "unverified": "Unverified paper",
 }
 
-DEFAULT_TITLE = "MedFact Evidence Graph"
+DEFAULT_TITLE = "MedScreen Evidence Graph"
 DEFAULT_SUBTITLE = (
     "Results of the automated search to find the studies that disprove a wrong medical claim. "
     "That is the basis of this medical quality filter."
@@ -532,7 +532,7 @@ _TEMPLATE = r"""<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MedFact Evidence Graph</title>
+<title>MedScreen Evidence Graph</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <style>

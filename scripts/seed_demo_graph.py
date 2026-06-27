@@ -19,10 +19,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from medfact_poc.graph import build_graph_data, render_html
-from medfact_poc.harness import load_gold
-from medfact_poc.schema import Candidate, ClaimStatus, GoldEntry, Stance, StanceLabel
-from medfact_poc.store import Store
+from medscreen_poc.graph import build_graph_data, render_html
+from medscreen_poc.harness import load_gold
+from medscreen_poc.schema import Candidate, ClaimStatus, GoldEntry, Stance, StanceLabel
+from medscreen_poc.store import Store
 
 DEMO_DB = Path("data/cache/demo.duckdb")
 DEMO_HTML = Path("reports/graph_demo.html")

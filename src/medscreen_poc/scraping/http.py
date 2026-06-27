@@ -2,7 +2,7 @@
 
 Centralizes rate limiting and TLS handling. Some environments such as corporate proxies
 and sandboxes terminate TLS with a self-signed cert that breaks default verification.
-Set ``MEDFACT_INSECURE_TLS=1`` or ``MEDFACT_CA_BUNDLE=/path/to/ca.pem`` to cope without
+Set ``MEDSCREEN_INSECURE_TLS=1`` or ``MEDSCREEN_CA_BUNDLE=/path/to/ca.pem`` to cope without
 editing code. NCBI asks callers to identify themselves with ``NCBI_EMAIL``, and an
 ``NCBI_API_KEY`` raises the rate limit from 3 to 10 requests per second.
 """
@@ -22,9 +22,9 @@ _MIN_INTERVAL = 0.34 if not NCBI_API_KEY else 0.11
 
 
 def _verify() -> bool | str:
-    if os.environ.get("MEDFACT_INSECURE_TLS") == "1":
+    if os.environ.get("MEDSCREEN_INSECURE_TLS") == "1":
         return False
-    bundle = os.environ.get("MEDFACT_CA_BUNDLE")
+    bundle = os.environ.get("MEDSCREEN_CA_BUNDLE")
     return bundle if bundle else True
 
 
@@ -53,7 +53,7 @@ def make_client(timeout: float = 30.0) -> httpx.Client:
     return httpx.Client(
         timeout=timeout,
         verify=_verify(),
-        headers={"User-Agent": f"medfact-poc-harness ({NCBI_EMAIL or 'anon'})"},
+        headers={"User-Agent": f"medscreen-poc-harness ({NCBI_EMAIL or 'anon'})"},
         follow_redirects=True,
     )
 

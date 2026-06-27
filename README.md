@@ -1,4 +1,4 @@
-# 🏥 MedFact — Evidence-Grounded Data Quality Filter for Medical Papers
+# 🏥 MedScreen — Evidence-Grounded Data Quality Filter for Medical Papers
 
 ## What this is
 
@@ -65,7 +65,7 @@ Retrieval is tuned so a known refutation actually comes back:
   types (meta-analyses, reviews, RCTs, guidelines), and one looking for contradiction (`risk`,
   `harm`, `no benefit`).
 - Two sources queried independently.
-- Optional cache: set `MEDFACT_QUERY_CACHE` to a file path (DuckDB) to fetch repeated searches
+- Optional cache: set `MEDSCREEN_QUERY_CACHE` to a file path (DuckDB) to fetch repeated searches
   once across a corpus. Unset to always search live.
 
 Embeddings (`transformation/semantic.py`) are used only to re-rank an already-fetched pool during
@@ -92,7 +92,7 @@ Scoring is mechanical, not a model opinion. Thresholds live in `transformation/s
 
 ## ❓ Validation study: can the search find the evidence?
 
-The filter is only as good as its search. A separate test (`medfact-run`) checks that one step
+The filter is only as good as its search. A separate test (`medscreen-run`) checks that one step
 using claims the field already knows were wrong, where the disproving study is recorded in
 advance. It runs the filter's search and checks how often it finds the known study, scored in two
 stages so a failure traces to the right one:
@@ -147,12 +147,12 @@ export GEMINI_API_KEY=...      # or ANTHROPIC_API_KEY / OPENAI_API_KEY
 
 ```bash
 # Offline stub backends — no key needed:
-medfact-filter --input path/to/pubmed_xml_dir
+medscreen-filter --input path/to/pubmed_xml_dir
 
 # Real backends (LLM extraction + stance, live retrieval):
-MEDFACT_LLM_PROVIDER=gemini MEDFACT_EXTRACT_BACKEND=llm \
-MEDFACT_STANCE_BACKEND=llm MEDFACT_RETRIEVER=live \
-  medfact-filter --input path/to/pubmed_xml_dir
+MEDSCREEN_LLM_PROVIDER=gemini MEDSCREEN_EXTRACT_BACKEND=llm \
+MEDSCREEN_STANCE_BACKEND=llm MEDSCREEN_RETRIEVER=live \
+  medscreen-filter --input path/to/pubmed_xml_dir
 ```
 
 Writes `reports/filter.csv` (per-paper table, documented in
@@ -167,29 +167,29 @@ types, and MeSH terms the filter relies on. The ingester reads any PubMed XML it
 ## 🏃 Run the validation
 
 ```bash
-medfact-build-cache      # fetch candidate evidence for the gold set into DuckDB
-medfact-run --use-cache  # score against the cache, write report to ./reports/
-medfact-graph            # render the evidence graph to reports/graph.html
+medscreen-build-cache      # fetch candidate evidence for the gold set into DuckDB
+medscreen-run --use-cache  # score against the cache, write report to ./reports/
+medscreen-graph            # render the evidence graph to reports/graph.html
 pytest                   # unit tests (network tests are opt-in: pytest -m live)
 ```
 
-`medfact-run` defaults to stub backends (offline, no key). For a real measurement:
+`medscreen-run` defaults to stub backends (offline, no key). For a real measurement:
 
 ```bash
-MEDFACT_EMBED_BACKEND=sbert MEDFACT_STANCE_BACKEND=llm MEDFACT_LLM_PROVIDER=gemini \
-  medfact-run --use-cache
+MEDSCREEN_EMBED_BACKEND=sbert MEDSCREEN_STANCE_BACKEND=llm MEDSCREEN_LLM_PROVIDER=gemini \
+  medscreen-run --use-cache
 ```
 
-`MEDFACT_EMBED_BACKEND=sbert` needs the `embed` extra; without it the numbers come from stubs and
+`MEDSCREEN_EMBED_BACKEND=sbert` needs the `embed` extra; without it the numbers come from stubs and
 are not a real measurement.
 
 ## 🌀 Visualization (optional)
 
-A secondary aid, not the product. `medfact-graph` renders a validation run to a self-contained
+A secondary aid, not the product. `medscreen-graph` renders a validation run to a self-contained
 interactive page (`reports/graph.html`) — claims as boxes, retrieved studies as dots, line colour
 for stance, with a legend, edge filters, a "recall gaps only" view, and hover/click focus. The
-filter draws the same graph for its own results at `reports/filter.html`. Run `medfact-run` (or
-`medfact-filter`) first so there is data to draw.
+filter draws the same graph for its own results at `reports/filter.html`. Run `medscreen-run` (or
+`medscreen-filter`) first so there is data to draw.
 
 <img width="1499" height="768" alt="Evidence graph" src="https://github.com/user-attachments/assets/e0018172-eb28-4b29-b49c-bbc18d825967" />
 
