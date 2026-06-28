@@ -32,6 +32,35 @@ product.
 
 <img width="1199" height="279" alt="Filter output table" src="https://github.com/user-attachments/assets/8ec9ed89-82d9-4dc7-a768-a57945c77b06" />
 
+The columns in the screenshot:
+
+| column | meaning |
+|---|---|
+| `pmid` | PubMed identifier of the paper. |
+| `title` | Article title. |
+| `verdict` | Truthfulness verdict: `supported`, `contested`, `refuted`, or `unverified`. |
+| `score` | Truthfulness score, `0.000` (refuted) to `1.000` (well supported). |
+| `action` | Recommended training action: `keep`, `downweight`, or `drop`. |
+| `n_claims` | How many claims were extracted from the paper. |
+| `n_refuted_claims` | How many claims were decisively refuted (verdict `refuted`). See the note below. |
+| `top_refuting_tier` | Evidence tier (`0.00`–`1.00`) of the strongest study that refutes any claim; `0.00` if none. |
+| `refuting_pmids` | PMIDs of every study that refutes any claim, separated by `;`; empty if none. |
+
+### Why `n_refuted_claims` can be `0` while `top_refuting_tier` and `refuting_pmids` have values
+
+This is expected, not a bug. The three columns measure two different things:
+
+- `refuting_pmids` and `top_refuting_tier` report whether any refuting study was found, for any
+  claim, no matter how that claim ends up scored.
+- `n_refuted_claims` counts only claims whose final verdict is `refuted`.
+
+A claim is marked `refuted` only when it has refuting evidence, has no supporting evidence, and that
+refutation is strong enough. If a claim has refuting studies but also has supporting studies (or the
+refutation is too weak to be decisive), the claim is `contested`, not `refuted`. A `contested` claim
+still reports its refuting studies in `refuting_pmids` and `top_refuting_tier`, but it does not add
+to `n_refuted_claims`. So every row in the screenshot is `supported` or `contested`, never `refuted`, which is why
+`n_refuted_claims` is `0` on every row.
+
 ## 🛠️ How it works
 
 The filter processes each paper on its own, judged only against external trusted evidence, so cost
@@ -53,79 +82,8 @@ plumbing before spending anything. Stub output is a placeholder, not a real resu
 The LLM's role is deliberately bounded to those two steps (extract and judge stance). It does not
 run the search, score a paper, or decide which papers are kept.
 
-### 🔎 How evidence is found
-
-Evidence is not stored locally, and this is not a vector search over all of PubMed. For each claim
-the filter builds a few keyword/boolean queries (`transformation/query.py`) and sends them to the
-PubMed E-utilities and Europe PMC search endpoints, which return a capped, relevance-ranked list
-of study IDs. It unions those with any dispute links from the paper's own XML, then fetches each
-candidate's abstract and publication type.
-
-Retrieval is tuned so a known refutation actually comes back:
-
-- Several searches per claim: a broad one (intervention + outcome), one limited to strong study
-  types (meta-analyses, reviews, RCTs, guidelines), and one looking for contradiction (`risk`,
-  `harm`, `no benefit`).
-- Two sources queried independently.
-- Optional cache: set `MEDSCREEN_QUERY_CACHE` to a file path (DuckDB) to fetch repeated searches
-  once across a corpus. Unset to always search live.
-
-Embeddings (`transformation/semantic.py`) are used only to re-rank an already-fetched pool during
-validation (`recall@k`); they cannot recover a study the queries never returned. Whether the
-queries succeed is the central failure mode, and exactly what the validation measures.
-
-> Status: proof of concept. Tested on 10 PubMed papers with Gemini 2.5 Flash Lite (6 kept, 4
-> downweighted, 0 dropped; all 10 got a real verdict). Not yet run on a large or varied dataset;
-> query construction, retrieval, and scoring all need refinement before production use.
-
-## 📄 How a paper is scored
-
-Scoring is mechanical, not a model opinion. Thresholds live in `transformation/scoring.py`.
-
-1. Weigh each study by its publication-type evidence tier (guideline 1.0, retraction 0.95,
-   systematic review 0.9, meta-analysis 0.85, RCT 0.8, observational 0.5, case report 0.2, else
-   0.4). Its pull on a claim is that tier × the model's stance confidence.
-2. Score the claim. Starting at 0.5, the strongest supporting pull raises the score and the
-   strongest refuting pull lowers it (refutation weighs about twice as much). Verdict is
-   `refuted`, `contested`, `supported`, or `unverified` (no usable evidence).
-3. Roll up to the paper by its most damning claim: lowest score, worst verdict. `refuted` drops
-   the paper, `contested` down-weights it, `supported` and `unverified` keep it. Unverified is
-   kept on purpose, since a missing refutation is not proof a claim is false.
-
-## ❓ Validation study: can the search find the evidence?
-
-The filter is only as good as its search. A separate test (`medscreen-run`) checks that one step
-using claims the field already knows were wrong, where the disproving study is recorded in
-advance. It runs the filter's search and checks how often it finds the known study, scored in two
-stages so a failure traces to the right one:
-
-- Retrieval recall: of the disproving studies that exist, the fraction the search pulled back.
-  Model-independent. The headline number.
-- Stance recall: of those fetched, the fraction the model labelled refuting.
-- Recall@k: retrieval recall within the top k results (k = 1, 5, 10, 20).
-- False-contradiction rate: fraction of still-true controls wrongly flagged refuted (lower is
-  better).
-
-Each miss is tagged with a root cause (`not_indexed`, `entity_miss`, `retrieved_not_recognized`,
-`condition_mismatch`, `tier_inversion`). Results print at the end of a run and save to
-`reports/recall-<timestamp>.md` and `.csv`.
-
-> Status: real measurement, two known gaps. A real run (`pritamdeka/S-PubMedBert-MS-MARCO`
-> embeddings, Gemini 2.5 Flash Lite stance) on the 10-reversal/8-control gold slice scored 80%
-> retrieval recall and a 25% false-contradiction rate (`reports/recall-20260621-194531.md`).
-> Stance recall is 100% conditional on retrieval, so retrieval is the sole bottleneck. Both misses
-> are `not_indexed` (the 1984 Marshall & Warren ulcer paper and the NICE-SUGAR trial), needing
-> MeSH-based queries or alias expansion. A stronger stance model than Flash Lite would improve the
-> false-contradiction rate.
-
-## 🤔 Doesn't this exist already?
-
-Why not trust well-cited sources, like a h-index? Reputation judges who is speaking, not whether they are right.
-The belief that hormone replacement therapy prevents coronary heart disease was highly cited the
-entire time it was wrong, until the 2002 Women's Health Initiative trial found the opposite.
-
-Why not just count refuted claims? That assumes the hard part of finding and confirming the
-refuting study is already done. This POC tests that step instead of taking it for granted.
+For how evidence is found, how a paper is scored, how the search is validated, and why the
+approach is built this way, see the [design notes](DESIGN.md).
 
 ## ⚙️ Setup
 
