@@ -26,13 +26,17 @@ from ..schema import (
 
 REFUTE_THRESHOLD = 0.5  # tier-weighted refutation strength at/above which a claim is refuted
 
-# Default action per verdict. Unverified is kept, because a missing refutation is not
-# evidence of falsity. The continuous score is also written so the user can set a threshold.
+# Default action per verdict. Unverified is kept, because a missing refutation when neutral
+# evidence *was* found is not proof of falsity. Ungrounded is different: no evidence was found
+# at all, so the claim has no corroboration in the literature. That is its own signal and is
+# flagged for review rather than silently kept. The continuous score is also written so the
+# user can set a threshold.
 _ACTION_BY_VERDICT = {
     Verdict.REFUTED: Action.DROP,
     Verdict.CONTESTED: Action.DOWNWEIGHT,
     Verdict.SUPPORTED: Action.KEEP,
     Verdict.UNVERIFIED: Action.KEEP,
+    Verdict.UNGROUNDED: Action.REVIEW,
 }
 
 
@@ -61,24 +65,24 @@ def score_claim(
 
 
 def _claim_verdict(n_evidence: int, has_refute: bool, has_support: bool, refute_strength: float) -> Verdict:
-    if n_evidence == 0:
-        return Verdict.UNVERIFIED
     if has_refute and has_support:
         return Verdict.CONTESTED
     if has_refute:
         return Verdict.REFUTED if refute_strength >= REFUTE_THRESHOLD else Verdict.CONTESTED
     if has_support:
         return Verdict.SUPPORTED
-    return Verdict.UNVERIFIED  # only neutral evidence
+    if n_evidence == 0:
+        return Verdict.UNGROUNDED  # nothing retrieved: the claim is not grounded in the literature
+    return Verdict.UNVERIFIED  # only neutral evidence: found, but inconclusive
 
 
 def score_paper(paper: PaperRecord, claim_verdicts: list[ClaimVerdict]) -> PaperVerdict:
     """Roll per-claim verdicts up to the paper, judged by its most damning claim."""
     if not claim_verdicts:
         return PaperVerdict(
-            pmid=paper.pmid, title=paper.title, verdict=Verdict.UNVERIFIED, score=0.5,
-            action=Action.KEEP, n_claims=0, n_refuted_claims=0, top_refuting_tier=0.0,
-            notes="no claims extracted",
+            pmid=paper.pmid, title=paper.title, verdict=Verdict.UNGROUNDED, score=0.5,
+            action=Action.REVIEW, n_claims=0, n_refuted_claims=0, top_refuting_tier=0.0,
+            grounded=False, notes="no claims extracted",
         )
 
     score = min(cv.score for cv in claim_verdicts)
@@ -90,6 +94,7 @@ def score_paper(paper: PaperRecord, claim_verdicts: list[ClaimVerdict]) -> Paper
         n_claims=len(claim_verdicts),
         n_refuted_claims=sum(1 for cv in claim_verdicts if cv.verdict is Verdict.REFUTED),
         top_refuting_tier=max(cv.top_refuting_tier for cv in claim_verdicts),
+        grounded=any(cv.n_supporting > 0 for cv in claim_verdicts),
         refuting_pmids=refuting_pmids, claim_verdicts=claim_verdicts,
     )
 
@@ -100,6 +105,10 @@ def _paper_verdict(claim_verdicts: list[ClaimVerdict]) -> Verdict:
         return Verdict.REFUTED
     if Verdict.CONTESTED in verdicts:
         return Verdict.CONTESTED
+    # An ungrounded claim (no evidence at all) is more damning than a supported or merely
+    # neutral one, so it surfaces over them in the most-damning-claim rollup.
+    if Verdict.UNGROUNDED in verdicts:
+        return Verdict.UNGROUNDED
     if Verdict.SUPPORTED in verdicts:
         return Verdict.SUPPORTED
     return Verdict.UNVERIFIED

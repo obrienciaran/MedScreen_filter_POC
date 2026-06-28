@@ -260,6 +260,7 @@ _CLAIM_COLOURS = {
     "contested": {"background": "#e8590c", "border": "#9c3d05"},
     "supported": {"background": "#2b8a3e", "border": "#1a5828"},
     "unverified": {"background": "#495057", "border": "#2b3035"},
+    "ungrounded": {"background": "#ae3ec9", "border": "#6a2079"},
 }
 _CLAIM_DEFAULT = {"background": "#11335c", "border": "#081f3a"}
 
@@ -390,6 +391,7 @@ _STATUS_LABELS = {
     "reversed": "Claim later overturned", "still_true": "Claim still accepted (control)",
     "refuted": "Refuted paper", "contested": "Contested paper",
     "supported": "Supported paper", "unverified": "Unverified paper",
+    "ungrounded": "Ungrounded paper (no evidence found)",
 }
 
 DEFAULT_TITLE = "MedScreen Evidence Graph"

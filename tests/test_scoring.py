@@ -50,13 +50,38 @@ def test_support_and_refute_is_contested():
     assert score_paper(PaperRecord(pmid="1"), [cv]).action is Action.DOWNWEIGHT
 
 
-def test_no_evidence_is_unverified_and_kept():
+def test_no_evidence_is_ungrounded_and_flagged_for_review():
     claim = _claim()
     cv = score_claim(claim, [], [])
+    assert cv.verdict is Verdict.UNGROUNDED
+    pv = score_paper(PaperRecord(pmid="1"), [cv])
+    assert pv.verdict is Verdict.UNGROUNDED
+    assert pv.action is Action.REVIEW
+    assert pv.grounded is False
+
+
+def test_neutral_evidence_is_unverified_and_kept():
+    claim = _claim()
+    cands = [_cand("N", ["Journal Article"])]
+    labels = [StanceLabel(claim_id=claim.claim_id, candidate_ext_id="N",
+                          stance=Stance.NEUTRAL, confidence=0.2)]
+    cv = score_claim(claim, cands, labels)
     assert cv.verdict is Verdict.UNVERIFIED
     pv = score_paper(PaperRecord(pmid="1"), [cv])
     assert pv.verdict is Verdict.UNVERIFIED
     assert pv.action is Action.KEEP
+    assert pv.grounded is False
+
+
+def test_supporting_evidence_marks_paper_grounded():
+    claim = _claim()
+    cands = [_cand("S", ["Meta-Analysis"])]
+    labels = [StanceLabel(claim_id=claim.claim_id, candidate_ext_id="S",
+                          stance=Stance.SUPPORTS, confidence=0.8)]
+    pv = score_paper(PaperRecord(pmid="1"), [score_claim(claim, cands, labels)])
+    assert pv.verdict is Verdict.SUPPORTED
+    assert pv.action is Action.KEEP
+    assert pv.grounded is True
 
 
 def test_paper_judged_by_most_damning_claim():

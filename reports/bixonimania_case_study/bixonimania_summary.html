@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MedScreen vs. Bixonimania (live run)</title>
+<style>
+  :root { --ink:#1a2530; --muted:#5a6b7b; --line:#e7ebf0; --purple:#ae3ec9; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+         color:var(--ink); background:#eef1f5; }
+  .card { max-width:680px; margin:18px auto; background:#fff; border-radius:14px;
+          box-shadow:0 10px 36px rgba(20,40,70,.12); overflow:hidden; }
+  header { padding:14px 22px; background:linear-gradient(120deg,#11335c,#2a6ab0); color:#fff; }
+  header .kicker { font-size:10.5px; letter-spacing:1.1px; text-transform:uppercase; color:#bcd4ec; }
+  header h1 { margin:5px 0 0; font-size:20px; letter-spacing:-.3px; }
+  header p { margin:6px 0 0; font-size:12px; color:#d6e4f2; line-height:1.45; }
+  .body { padding:13px 22px 15px; }
+  .verdict { display:flex; align-items:center; gap:11px; padding:9px 13px; border-radius:10px;
+             background:#faf2fc; border:1px solid #ecd4f3; margin-bottom:12px; }
+  .verdict .badge { background:var(--purple); color:#fff; font-weight:700; font-size:11.5px;
+                    padding:5px 11px; border-radius:18px; white-space:nowrap; }
+  .verdict .vtext { font-size:12px; line-height:1.45; }
+  .verdict .vtext b { color:var(--purple); }
+  .stats { display:flex; gap:10px; margin-bottom:13px; flex-wrap:wrap; }
+  .stat { flex:1; min-width:130px; background:#f7f9fb; border:1px solid var(--line);
+          border-radius:10px; padding:9px 13px; }
+  .stat .n { font-size:25px; font-weight:700; letter-spacing:-.5px; }
+  .stat .n.zero { color:var(--purple); }
+  .stat .l { font-size:11px; color:var(--muted); margin-top:2px; line-height:1.35; }
+  h2 { font-size:11.5px; text-transform:uppercase; letter-spacing:.6px; color:var(--muted);
+       margin:2px 0 6px; }
+  .claim { display:flex; align-items:center; gap:12px; padding:5px 0; border-bottom:1px solid #b4bfca; }
+  .claim:last-child { border-bottom:none; }
+  .claim .txt { flex:1; font-size:12px; line-height:1.4; }
+  .claim .txt .meta { color:var(--muted); font-size:11px; margin-top:1px; }
+  .ev { width:150px; flex:none; }
+  .ev .track { height:8px; background:#eef1f5; border-radius:4px; overflow:hidden; }
+  .ev .fill { height:100%; border-radius:4px; }
+  .ev .cap { font-size:10.5px; color:var(--muted); margin-top:4px; line-height:1.35; }
+  .ev .cap b { color:var(--ink); font-size:11px; }
+  .ev.empty .cap, .ev.empty .cap b { color:#c92a2a; font-weight:700; }
+  .papers { margin-top:13px; }
+  .papers h2 { margin-bottom:3px; }
+  .papers .psub { font-size:11px; color:var(--muted); margin:0 0 7px; line-height:1.4; }
+  .papers .plegend { display:flex; gap:16px; flex-wrap:wrap; font-size:10.5px; color:var(--muted); margin:9px 0 0; }
+  .papers .plegend .li { display:inline-flex; align-items:center; gap:6px; }
+  .papers .plegend .ldot { width:7px; height:7px; border-radius:50%; display:inline-block; }
+  .paper { display:flex; gap:9px; padding:5px 0; border-bottom:1px solid var(--line); font-size:11.5px; line-height:1.4; }
+  .paper:last-child { border-bottom:none; }
+  .paper .dot { flex:none; width:7px; height:7px; border-radius:50%; margin-top:5px; }
+  .paper a { color:#1f5fa0; text-decoration:none; font-weight:600; }
+  .paper a:hover { text-decoration:underline; }
+  .paper .role { color:var(--muted); }
+</style></head>
+<body>
+  <div class="card">
+    <header>
+      <h1>A fake disease meets an evidence filter</h1>
+      <p>Researchers invented a fake disease called "Bixonimania" to see whether fabricated
+      medical claims would propagate into AI systems and their training data. MedScreen is an
+      evidence-grounded truth filter. It scores a paper on the evidence retrieval can actually find,
+      not on how convincing it reads. Here it catches the fabricated disease before it could reach a
+      training set.</p>
+    </header>
+    <div class="body">
+      <div class="verdict">
+        <span class="badge">UNGROUNDED &rarr; REVIEW</span>
+        <span class="vtext">The claims that assert the disease <b>as a real entity</b> returned
+          <b>zero evidence</b> across the entire live corpus. With no corroboration in the
+          literature, MedScreen flags the paper for review.</span>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><div class="n">5</div><div class="l">checkable claims extracted from the paper</div></div>
+        <div class="stat"><div class="n zero">0</div><div class="l">studies grounding the disease itself, across PubMed + Europe PMC</div></div>
+        <div class="stat"><div class="n">1</div><div class="l">direct "Bixonimania" match found, and it is a <em>retracted</em> paper</div></div>
+      </div>
+
+      <h2>The paper's 5 claims, checked against the live literature</h2>
+      <div class="claims">
+        <div class="claim">
+          <div class="txt">Bixonimania is a distinct blue light-induced periorbital melanosis of adolescent screen users.
+            <div class="meta">Asserts the disease exists</div></div>
+          <div class="ev empty"><div class="track"></div><div class="cap"><b>0 studies found</b><br>no record of the disease</div></div>
+        </div>
+        <div class="claim">
+          <div class="txt">Dermoscopy showed a characteristic blue-grey perifollicular pigment network in Bixonimania.
+            <div class="meta">Asserts a disease-specific sign</div></div>
+          <div class="ev empty"><div class="track"></div><div class="cap"><b>0 studies found</b><br>no record of this sign</div></div>
+        </div>
+        <div class="claim">
+          <div class="txt">Bixonimania was identified in 18% of adolescents with &gt;6 h daily screen exposure.
+            <div class="meta">Prevalence claim about the disease</div></div>
+          <div class="ev"><div class="track"><div class="fill" style="width:10%;background:#868e96"></div></div><div class="cap"><b>1 study found</b><br>the retracted paper itself</div></div>
+        </div>
+        <div class="claim">
+          <div class="txt">Blue light-filtering spectacles markedly reduced Bixonimania severity.
+            <div class="meta">Treatment claim for the disease</div></div>
+          <div class="ev"><div class="track"><div class="fill" style="width:10%;background:#868e96"></div></div><div class="cap"><b>1 eye-strain study</b><br>not about Bixonimania</div></div>
+        </div>
+        <div class="claim">
+          <div class="txt">Symptom severity correlated with daily blue light exposure.
+            <div class="meta">Blue-light claim (a real topic)</div></div>
+          <div class="ev"><div class="track"><div class="fill" style="width:100%;background:#495057"></div></div><div class="cap"><b>10 blue-light studies</b><br>none about Bixonimania</div></div>
+        </div>
+      </div>
+
+      <div class="papers">
+        <h2>Papers found based on claims</h2>
+        <div class="psub">12 studies retrieved in total, none about Bixonimania. A few are shown below.</div>
+        <div class="paper"><span class="dot" style="background:var(--purple)"></span>
+          <span><a href="https://pubmed.ncbi.nlm.nih.gov/39735093/">Clinical and Dermoscopic Evaluation of Periorbital Melanosis and Its Psychological Impact and Effect on Quality of Life</a>
+          <span class="role">&mdash; the only "Bixonimania" match, and a <b>retracted</b> paper (PMID 39735093)</span></span></div>
+        <div class="paper"><span class="dot" style="background:#868e96"></span>
+          <span><a href="https://pubmed.ncbi.nlm.nih.gov/41322997/">Long-Term Use of Blue Light-Filtering Glasses and Symptom Improvement in Digital Eye Strain</a>
+          <span class="role">&mdash; real, but about digital eye strain, not the disease (PMID 41322997)</span></span></div>
+        <div class="paper"><span class="dot" style="background:#868e96"></span>
+          <span><a href="https://pubmed.ncbi.nlm.nih.gov/29101797/">Blocking nocturnal blue light for insomnia: A randomized controlled trial</a>
+          <span class="role">&mdash; blue light &amp; insomnia, unrelated to periorbital melanosis (PMID 29101797)</span></span></div>
+        <div class="paper"><span class="dot" style="background:#868e96"></span>
+          <span><a href="https://pubmed.ncbi.nlm.nih.gov/36172467/">Morning blue light treatment improves sleep complaints and symptom severity in PTSD</a>
+          <span class="role">&mdash; blue light &amp; PTSD sleep, not the disease (PMID 36172467)</span></span></div>
+        <div class="paper"><span class="dot" style="background:#868e96"></span>
+          <span><a href="https://pubmed.ncbi.nlm.nih.gov/39606594/">LED-emitted blue light improves quality of life and reduces fatigue after COVID-19</a>
+          <span class="role">&mdash; blue light &amp; post-COVID fatigue, not the disease (PMID 39606594)</span></span></div>
+        <div class="plegend">
+          <span class="li"><span class="ldot" style="background:var(--purple)"></span>the fake-disease match (retracted)</span>
+          <span class="li"><span class="ldot" style="background:#868e96"></span>a real study on a related claim</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</body></html>

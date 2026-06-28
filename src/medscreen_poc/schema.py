@@ -190,7 +190,8 @@ class Verdict(str, Enum):
     SUPPORTED = "supported"  # evidence backs it, no credible refutation
     CONTESTED = "contested"  # evidence both supports and refutes it
     REFUTED = "refuted"  # higher-tier evidence contradicts it
-    UNVERIFIED = "unverified"  # no usable evidence found (absence is not falsity)
+    UNVERIFIED = "unverified"  # neutral evidence found, inconclusive (absence is not falsity)
+    UNGROUNDED = "ungrounded"  # no evidence found at all; the claim is not grounded in the literature
 
 
 class Action(str, Enum):
@@ -199,6 +200,7 @@ class Action(str, Enum):
     KEEP = "keep"
     DOWNWEIGHT = "downweight"
     DROP = "drop"
+    REVIEW = "review"  # no supporting evidence found; flag for human/downstream attention
 
 
 class PaperRecord(BaseModel):
@@ -264,6 +266,10 @@ class PaperVerdict(BaseModel):
     n_claims: int
     n_refuted_claims: int
     top_refuting_tier: float
+    # True when at least one claim found supporting evidence in the literature. False means
+    # the paper is ungrounded (no corroboration retrieved), which is its own signal and must
+    # not be silently kept.
+    grounded: bool = True
     refuting_pmids: list[str] = Field(default_factory=list)
     claim_verdicts: list[ClaimVerdict] = Field(default_factory=list)
     notes: str = ""

@@ -130,7 +130,8 @@ placeholder that fakes the step with no LLM and no network) so the filter and va
 offline, plus a real backend. Real runs need `MEDSCREEN_LLM_PROVIDER` in {anthropic, openai,
 gemini}, `MEDSCREEN_EXTRACT_BACKEND=llm`, `MEDSCREEN_STANCE_BACKEND=llm`, and
 `MEDSCREEN_RETRIEVER=live` (and `MEDSCREEN_EMBED_BACKEND=sbert` for the validation tool). Stub output is a
-placeholder, not a real result.
+placeholder, not a real result. Real use always runs the live retriever against PubMed/Europe PMC; the
+stub retriever is only for test cases and the gold-standard validation slice, never for a production verdict.
 
 ### Data
 

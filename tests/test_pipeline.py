@@ -18,8 +18,12 @@ def test_filter_end_to_end_stub():
     assert rct.action is Action.DROP
     assert "99999999" in rct.refuting_pmids
 
-    # The retraction notice itself is not refuted, so it is kept.
-    assert verdicts["22222222"].action is Action.KEEP
+    # The retraction notice itself has no evidence pool of its own, so it is ungrounded:
+    # not refuted, but not silently kept either, it is flagged for review.
+    notice = verdicts["22222222"]
+    assert notice.verdict is Verdict.UNGROUNDED
+    assert notice.action is Action.REVIEW
+    assert notice.grounded is False
 
 
 def test_paper_graph_renders(tmp_path):

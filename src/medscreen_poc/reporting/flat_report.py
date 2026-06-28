@@ -14,7 +14,7 @@ from pathlib import Path
 from ..schema import PaperVerdict
 
 COLUMNS = [
-    "pmid", "title", "verdict", "score", "action", "n_claims", "n_refuted_claims",
+    "pmid", "title", "verdict", "score", "action", "grounded", "n_claims", "n_refuted_claims",
     "top_refuting_tier", "refuting_pmids", "notes",
 ]
 
@@ -29,7 +29,7 @@ def write_flat_csv(verdicts: list[PaperVerdict], path: str | Path) -> Path:
         for v in verdicts:
             w.writerow([
                 v.pmid, v.title, v.verdict.value, f"{v.score:.3f}", v.action.value,
-                v.n_claims, v.n_refuted_claims, f"{v.top_refuting_tier:.2f}",
-                ";".join(v.refuting_pmids), v.notes,
+                str(v.grounded).lower(), v.n_claims, v.n_refuted_claims,
+                f"{v.top_refuting_tier:.2f}", ";".join(v.refuting_pmids), v.notes,
             ])
     return path
