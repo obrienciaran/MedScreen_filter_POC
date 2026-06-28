@@ -197,5 +197,9 @@ filter draws the same graph for its own results at `reports/filter.html`. Run `m
 
 ## 🛣️ Roadmap
 
-Not built yet: GRADE-based evidence weighting, feeding verdicts into training weights, UMLS
-concept grounding, approximate-nearest-neighbour indexing, and a non-LLM stance classifier.
+Not built yet:
+
+- GRADE-based evidence weighting: today the filter weights evidence by a flat publication-type tier (an RCT is 0.8, a systematic review 0.9, and so on), which judges a study by its type label alone. GRADE keeps the same role of deciding how much each piece is allowed to move a claim's score, but rates it more accurately by adjusting for risk of bias, inconsistency, indirectness, and imprecision, so evidence quality rather than just the study type drives the verdict.
+- Strengthening the retrieval process, so contradicting and superseding evidence is surfaced more reliably. This includes LLM-driven query and topic expansion to match on meaning rather than surface wording, and approximate-nearest-neighbour indexing to replace the current brute-force cosine search.
+- Broader evaluation. Expanding the gold slice and error taxonomy to measure recall and false-contradiction rates across more medical domains.
+- Testing with a local LLM to avoid API costs during development and evaluation.
