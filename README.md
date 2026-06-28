@@ -124,8 +124,8 @@ Why not trust well-cited sources, like a h-index? Reputation judges who is speak
 The belief that hormone replacement therapy prevents coronary heart disease was highly cited the
 entire time it was wrong, until the 2002 Women's Health Initiative trial found the opposite.
 
-Why not just count refuted claims? That assumes the hard part — finding and confirming the
-refuting study — is already done. This POC tests that step instead of taking it for granted.
+Why not just count refuted claims? That assumes the hard part of finding and confirming the
+refuting study is already done. This POC tests that step instead of taking it for granted.
 
 ## ⚙️ Setup
 
