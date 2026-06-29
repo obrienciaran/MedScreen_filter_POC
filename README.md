@@ -42,18 +42,21 @@ The columns in the screenshot:
 
 ### Why `n_refuted_claims` can be `0` while `top_refuting_tier` and `refuting_pmids` have values
 
-This is expected, not a bug. The three columns measure two different things:
+This is expected, not a bug.
 
-- `refuting_pmids` and `top_refuting_tier` report whether any refuting study was found, for any
-  claim, no matter how that claim ends up scored.
-- `n_refuted_claims` counts only claims whose final verdict is `refuted`.
+Each claim is checked against multiple retrieved studies. Some studies may refute the claim,
+others may support it. If a claim has studies on both sides, its verdict is `contested`, not
+`refuted`. A claim is only `refuted` when the retrieved studies refute it and none support it,
+and the refutation is strong enough (the refuting study's evidence tier multiplied by the stance
+judge's confidence reaches at least 0.5).
 
-A claim is marked `refuted` only when it has refuting evidence, has no supporting evidence, and that
-refutation is strong enough. If a claim has refuting studies but also has supporting studies (or the
-refutation is too weak to be decisive), the claim is `contested`, not `refuted`. A `contested` claim
-still reports its refuting studies in `refuting_pmids` and `top_refuting_tier`, but it does not add
-to `n_refuted_claims`. So every row in the screenshot is `supported` or `contested`, never `refuted`, which is why
-`n_refuted_claims` is `0` on every row.
+`refuting_pmids` and `top_refuting_tier` collect every study that refuted any claim, regardless
+of how that claim was ultimately scored. So a `contested` claim (where refuting and supporting studies were both found) still contributes
+its refuting studies to those columns.
+`n_refuted_claims` counts only claims whose final verdict is `refuted`.
+
+In the screenshot, every claim is `supported` or `contested`, so `n_refuted_claims` is `0` even
+though refuting studies were found and appear in `refuting_pmids`.
 
 ## 🛠️ How it works
 
@@ -64,8 +67,23 @@ For each paper:
 2. Extract claims: an LLM lifts the paper's specific claims out of its text.
 3. Retrieve evidence: for each claim, fetch candidate studies that bear on it.
 4. Judge stance: an LLM labels each candidate supporting, refuting, or neutral toward the claim.
-5. Score: weigh those labels by evidence tier into a per-claim verdict, then take the paper's
-   worst claim as its verdict.
+5. Score: combine those labels with each study's evidence tier into a per-claim verdict. All
+   claims are scored, but the paper's final verdict and score are driven by the single most
+   damning claim.
+
+   The verdict category and the score are two separate outputs and should not be confused with
+   each other.
+
+   The verdict (`refuted` > `contested` > `supported`) is a category determined by verdict
+   severity alone: a paper with nine supported claims and one refuted claim is categorised as
+   `refuted`.
+
+   The score (0.0 to 1.0) is a separate continuous measure of how strongly that verdict is
+   supported by the evidence. It is computed from two inputs: the evidence tier of the refuting
+   study (e.g. an RCT scores higher than a case report) and the stance judge's confidence, which
+   is a 0.0 to 1.0 value the LLM self-reports alongside its label as its own assessment of how
+   certain it is of that label. Neither of those inputs is the score itself. A weakly refuted claim and a strongly
+   refuted claim both produce a `refuted` verdict, but their scores will differ.
 
 The LLM handles only extraction and stance. It does not run the search, score papers, or decide
 what is kept. The pipeline also runs offline on stub backends so you can check the plumbing
