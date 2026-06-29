@@ -9,14 +9,8 @@ at a corpus of PubMed papers (XML) and it produces a flat table, one row per pap
 whether each paper's claims hold up against trusted medical evidence. Downstream training can then
 keep, down-weight, or drop papers based on that table.
 
-The point is to filter on truth, not surface features. Rule-based filters, quality classifiers,
-and LLM raters all judge a paper by how it reads (fluency, formatting, resemblance to a trusted
-reference), which is exactly what confident misinformation imitates best. This filter instead
-pulls out each claim and checks it against the evidence, so the verdict is discovered, not
-guessed.
-
-It is a POC, so it tests the one dependency the approach rests on; can retrieval find the evidence
-that contradicts a wrong claim?
+Rule-based filters and LLM raters judge a paper by how it reads, which is what confident
+misinformation imitates best. This filter checks each claim against retrieved evidence instead.
 
 ## ➡️ What it produces
 
@@ -63,27 +57,22 @@ to `n_refuted_claims`. So every row in the screenshot is `supported` or `contest
 
 ## 🛠️ How it works
 
-The filter processes each paper on its own, judged only against external trusted evidence, so cost
-grows linearly with the number of papers. For one paper:
+For each paper:
 
 1. Ingest: read the PubMed XML into a structured record (claim text, publication type, MeSH
    terms, retraction/comment links).
 2. Extract claims: an LLM lifts the paper's specific claims out of its text.
-3. Retrieve evidence: for each claim, fetch a small set of candidate studies that bear on it.
-   This is the step the POC validates.
-4. Judge stance: an LLM reads each candidate's title and abstract and labels it supporting,
-   refuting, or neutral toward the claim.
+3. Retrieve evidence: for each claim, fetch candidate studies that bear on it.
+4. Judge stance: an LLM labels each candidate supporting, refuting, or neutral toward the claim.
 5. Score: weigh those labels by evidence tier into a per-claim verdict, then take the paper's
-   worst claim as its verdict (see below).
+   worst claim as its verdict.
 
-The whole pipeline also runs offline on stub backends (no network, no LLM) so you can check the
-plumbing before spending anything. Stub output is a placeholder, not a real result.
+The LLM handles only extraction and stance. It does not run the search, score papers, or decide
+what is kept. The pipeline also runs offline on stub backends so you can check the plumbing
+without a key or network call; stub output is a placeholder, not a real result.
 
-The LLM's role is deliberately bounded to those two steps (extract and judge stance). It does not
-run the search, score a paper, or decide which papers are kept.
-
-For how evidence is found, how a paper is scored, how the search is validated, and why the
-approach is built this way, see the [design notes](DESIGN.md).
+See the [design notes](DESIGN.md) for how evidence is found, how scoring works, and how retrieval
+is validated.
 
 ## ⚙️ Setup
 
@@ -115,11 +104,6 @@ MEDSCREEN_STANCE_BACKEND=llm MEDSCREEN_RETRIEVER=live \
   medscreen-filter --input path/to/pubmed_xml_dir
 ```
 
-Writes `reports/filter.csv` (per-paper table, documented in
-[`reports/README.md`](reports/README.md)) and `reports/filter.html` (interactive graph). The other
-HTML files in `reports/` are not a filter run — `graph_demo.html` is a shipped example and
-`graph.html` is the validation visualization.
-
 Input must be PubMed/MEDLINE XML, since it carries the `CommentsCorrectionsList` links, publication
 types, and MeSH terms the filter relies on. The ingester reads any PubMed XML it can and skips
 (with an error) any it cannot.
@@ -145,11 +129,9 @@ are not a real measurement.
 
 ## 🌀 Visualization (optional)
 
-A secondary aid, not the product. `medscreen-graph` renders a validation run to a self-contained
-interactive page (`reports/graph.html`) — claims as boxes, retrieved studies as dots, line colour
-for stance, with a legend, edge filters, a "recall gaps only" view, and hover/click focus. The
-filter draws the same graph for its own results at `reports/filter.html`. Run `medscreen-run` (or
-`medscreen-filter`) first so there is data to draw.
+`medscreen-graph` renders a run to an interactive evidence graph (`reports/graph.html`). The
+filter writes the same graph for its own results at `reports/filter.html`. Run `medscreen-run` or
+`medscreen-filter` first so there is data to draw.
 
 <img width="1499" height="768" alt="Evidence graph" src="https://github.com/user-attachments/assets/e0018172-eb28-4b29-b49c-bbc18d825967" />
 
