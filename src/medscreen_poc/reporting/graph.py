@@ -196,7 +196,9 @@ def build_paper_graph_data(verdicts: list[PaperVerdict]) -> GraphData:
                 f"Score: {v.score:.2f}\nAction: {v.action.value}\nClaims: {v.n_claims}"
             ),
         )
-        refuting = {p for cv in v.claim_verdicts for p in cv.refuting_pmids}
+        # Union in paper-level refuting_pmids so a formally-retracted paper (short-circuited
+        # before per-claim scoring, so it has no claim_verdicts) still shows its retraction edge.
+        refuting = {p for cv in v.claim_verdicts for p in cv.refuting_pmids} | set(v.refuting_pmids)
         supporting = {p for cv in v.claim_verdicts for p in cv.supporting_pmids} - refuting
 
         def add_evidence(pmid: str, *, refutes: bool) -> None:

@@ -24,7 +24,16 @@ from ..schema import (
     Verdict,
 )
 
-REFUTE_THRESHOLD = 0.5  # tier-weighted refutation strength at/above which a claim is refuted
+# A claim is REFUTED (which drops the paper) only when the strongest refutation clears all
+# three floors at once, so a DROP is reserved for unambiguous, high-tier, high-confidence
+# contradiction. Anything weaker (a low-tier refutation, an unsure judge, or a strength below
+# the bar) falls back to CONTESTED, which down-weights rather than drops. This optimises for
+# precision on the destructive action: we would rather down-weight a bad paper than drop a
+# good one. The floors are separate on purpose (rather than one combined strength) so a very
+# confident judgement on a weak study cannot substitute for a strong study, or vice versa.
+DROP_MIN_STRENGTH = 0.6  # tier x stance-confidence of the strongest refuter
+DROP_MIN_TIER = 0.8  # refuting study must be an RCT or higher
+DROP_MIN_CONFIDENCE = 0.7  # stance judge must be confident in the refutation
 
 # Default action per verdict. Unverified is kept, because a missing refutation when neutral
 # evidence *was* found is not proof of falsity. Ungrounded is different: no evidence was found
@@ -48,27 +57,54 @@ def score_claim(
     refuting = [l for l in labels if l.stance is Stance.REFUTES]
     supporting = [l for l in labels if l.stance is Stance.SUPPORTS]
 
-    refute_strength = max((tier.get(l.candidate_ext_id, 0.4) * l.confidence for l in refuting), default=0.0)
-    support_strength = max((tier.get(l.candidate_ext_id, 0.4) * l.confidence for l in supporting), default=0.0)
+    def pull(label: StanceLabel) -> float:
+        return tier.get(label.candidate_ext_id, 0.4) * label.confidence
+
+    year_by_id = {c.ext_id: c.year for c in candidates}
+    top_refuter = max(refuting, key=pull, default=None)
+    refute_strength = pull(top_refuter) if top_refuter else 0.0
+    support_strength = max((pull(l) for l in supporting), default=0.0)
     top_refuting_tier = max((tier.get(l.candidate_ext_id, 0.4) for l in refuting), default=0.0)
+    # Tier and confidence of the single strongest refuter, judged together against the DROP
+    # floors below. Kept separate from top_refuting_tier, which is the max tier across all
+    # refuters regardless of confidence.
+    refuting_tier = tier.get(top_refuter.candidate_ext_id, 0.4) if top_refuter else 0.0
+    refuting_confidence = top_refuter.confidence if top_refuter else 0.0
+    refuting_year = year_by_id.get(top_refuter.candidate_ext_id) if top_refuter else None
 
     score = _clamp(0.5 + 0.4 * support_strength - 0.8 * refute_strength)
-    verdict = _claim_verdict(len(labels), bool(refuting), bool(supporting), refute_strength)
+    verdict = _claim_verdict(
+        len(labels), top_refuter is not None, bool(supporting),
+        refute_strength, refuting_tier, refuting_confidence,
+    )
 
     return ClaimVerdict(
         claim_id=claim.claim_id, claim_text=claim.claim_text,
         n_evidence=len(labels), n_refuting=len(refuting), n_supporting=len(supporting),
         top_refuting_tier=top_refuting_tier, verdict=verdict, score=score,
+        refuting_confidence=refuting_confidence, refuting_year=refuting_year,
         refuting_pmids=[l.candidate_ext_id for l in refuting],
         supporting_pmids=[l.candidate_ext_id for l in supporting],
     )
 
 
-def _claim_verdict(n_evidence: int, has_refute: bool, has_support: bool, refute_strength: float) -> Verdict:
+def _claim_verdict(
+    n_evidence: int,
+    has_refute: bool,
+    has_support: bool,
+    refute_strength: float,
+    refuting_tier: float,
+    refuting_confidence: float,
+) -> Verdict:
     if has_refute and has_support:
-        return Verdict.CONTESTED
+        return Verdict.CONTESTED  # evidence on both sides is ambiguous, never a drop
     if has_refute:
-        return Verdict.REFUTED if refute_strength >= REFUTE_THRESHOLD else Verdict.CONTESTED
+        unambiguous = (
+            refute_strength >= DROP_MIN_STRENGTH
+            and refuting_tier >= DROP_MIN_TIER
+            and refuting_confidence >= DROP_MIN_CONFIDENCE
+        )
+        return Verdict.REFUTED if unambiguous else Verdict.CONTESTED
     if has_support:
         return Verdict.SUPPORTED
     if n_evidence == 0:
@@ -81,8 +117,9 @@ def score_paper(paper: PaperRecord, claim_verdicts: list[ClaimVerdict]) -> Paper
     if not claim_verdicts:
         return PaperVerdict(
             pmid=paper.pmid, title=paper.title, verdict=Verdict.UNGROUNDED, score=0.5,
-            action=Action.REVIEW, n_claims=0, n_refuted_claims=0, top_refuting_tier=0.0,
-            grounded=False, notes="no claims extracted",
+            action=Action.REVIEW, verdict_basis="none", refutation_timing="unknown",
+            n_claims=0, n_refuted_claims=0, top_refuting_tier=0.0, grounded=False,
+            notes="no claims extracted",
         )
 
     score = min(cv.score for cv in claim_verdicts)
@@ -90,13 +127,28 @@ def score_paper(paper: PaperRecord, claim_verdicts: list[ClaimVerdict]) -> Paper
     refuting_pmids = sorted({p for cv in claim_verdicts for p in cv.refuting_pmids})
     return PaperVerdict(
         pmid=paper.pmid, title=paper.title, verdict=verdict, score=score,
-        action=_ACTION_BY_VERDICT[verdict],
+        action=_ACTION_BY_VERDICT[verdict], verdict_basis="evidence",
+        refutation_timing=_refutation_timing(paper, claim_verdicts),
         n_claims=len(claim_verdicts),
         n_refuted_claims=sum(1 for cv in claim_verdicts if cv.verdict is Verdict.REFUTED),
         top_refuting_tier=max(cv.top_refuting_tier for cv in claim_verdicts),
         grounded=any(cv.n_supporting > 0 for cv in claim_verdicts),
         refuting_pmids=refuting_pmids, claim_verdicts=claim_verdicts,
     )
+
+
+def _refutation_timing(paper: PaperRecord, claim_verdicts: list[ClaimVerdict]) -> str:
+    """Whether the refuting evidence came before or after the paper.
+
+    "prior" if any refuting study predates the paper (it contradicted already-published
+    evidence), else "subsequent" (overturned by later evidence, the reversal pattern).
+    "unknown" when the paper's year is missing or no refutation carried a year. This is only a
+    time ordering, not a claim about whether the paper was ever accepted consensus.
+    """
+    refuting_years = [cv.refuting_year for cv in claim_verdicts if cv.refuting_year is not None]
+    if paper.year is None or not refuting_years:
+        return "unknown"
+    return "prior" if any(y < paper.year for y in refuting_years) else "subsequent"
 
 
 def _paper_verdict(claim_verdicts: list[ClaimVerdict]) -> Verdict:

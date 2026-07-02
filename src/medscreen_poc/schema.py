@@ -79,6 +79,12 @@ class GoldEntry(BaseModel):
     claim_text: str = Field(..., description="The claim as originally asserted in the literature.")
     normalized: NormalizedClaim
     status: ClaimStatus
+    # Why the claim is wrong, for reversed entries. "reversal" is good-faith science later
+    # superseded by higher-tier evidence (the disproving study is a newer trial/review).
+    # "fabrication" is research misconduct (the disproving evidence is a retraction notice, so
+    # retrieval must surface it via the retraction link, a different path). Controls keep the
+    # default. This labels the retrieval mechanism, not a new ground-truth axis.
+    category: Literal["reversal", "fabrication"] = "reversal"
     answer_key: list[str] = Field(
         default_factory=list,
         description="PMIDs/DOIs of the landmark refuting study/SR/guideline. "
@@ -251,6 +257,8 @@ class ClaimVerdict(BaseModel):
     top_refuting_tier: float
     verdict: Verdict
     score: float  # 0 (refuted) .. 1 (well supported)
+    refuting_confidence: float = 0.0  # stance confidence of the strongest refuter, 0 if none
+    refuting_year: int | None = None  # publication year of the strongest refuter, if known
     refuting_pmids: list[str] = Field(default_factory=list)
     supporting_pmids: list[str] = Field(default_factory=list)
 
@@ -263,6 +271,16 @@ class PaperVerdict(BaseModel):
     verdict: Verdict
     score: float
     action: Action
+    # What the verdict rests on: "retraction" when the paper's own XML carries a formal
+    # retraction link (the cheap offline fast path), "evidence" when it came from retrieved
+    # literature and stance judgement, "none" when neither applied (no claims, or an error).
+    verdict_basis: Literal["retraction", "evidence", "none"] = "evidence"
+    # When the paper is refuted/contested, whether the refuting evidence came AFTER the paper
+    # ("subsequent", the reversal pattern) or BEFORE it ("prior", the paper contradicted
+    # already-published evidence, a stronger quality signal). "unknown" when years are missing
+    # or there is no refutation. A formal retraction is always "subsequent". This does not claim
+    # the paper was ever accepted consensus, only the observable time order of the evidence.
+    refutation_timing: Literal["prior", "subsequent", "unknown"] = "unknown"
     n_claims: int
     n_refuted_claims: int
     top_refuting_tier: float

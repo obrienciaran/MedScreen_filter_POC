@@ -1,0 +1,2 @@
+pmid,title,verdict,score,action,verdict_basis,refutation_timing,grounded,n_claims,n_refuted_claims,top_refuting_tier,refuting_confidence,claim_scores,refuting_pmids,notes
+99000001,Bixonimania: a clinical and dermoscopic evaluation of blue light-induced periorbital melanosis in adolescent screen users.,ungrounded,0.500,review,evidence,unknown,false,1,0,0.00,0.00,99000001#c0=0.500,,

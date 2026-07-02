@@ -12,10 +12,12 @@ def test_filter_end_to_end_stub():
     papers = parse_pubmed_xml(FIXTURE.read_text())
     verdicts = {v.pmid: v for v in run_filter(papers)}
 
-    # The retracted RCT is refuted via its RetractionIn link and should be dropped.
+    # The retracted RCT is refuted via its RetractionIn link and should be dropped. The
+    # short-circuit catches it before any extraction/retrieval, so the basis is "retraction".
     rct = verdicts["11111111"]
     assert rct.verdict is Verdict.REFUTED
     assert rct.action is Action.DROP
+    assert rct.verdict_basis == "retraction"
     assert "99999999" in rct.refuting_pmids
 
     # The retraction notice itself has no evidence pool of its own, so it is ungrounded:

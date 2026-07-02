@@ -22,6 +22,32 @@ The validation tool's core question is for medical claims the field already know
 the retrieval process surface the contradicting or superseding evidence? Its output is a recall number plus
 an error taxonomy showing where retrieval fails. The filter's output is the per-paper truthfulness table.
 
+### What this filter judges (and what it does not)
+
+This is an evidence-based factuality filter, full stop. It has one axis: are a paper's claims
+factually correct given trusted scientific evidence. The goal is that models trained on the kept
+corpus output factually correct medical information, so we remove provably refuted claims and
+flag ungrounded ones.
+
+It deliberately does NOT judge the quality of the paper. We are explicitly not concerned with,
+and must never let the verdict be influenced by:
+
+- sample size or statistical power
+- statistical rigour, methodology, or study-design strength (of the paper being filtered)
+- reproducibility or replication status
+- writing quality, fluency, or formatting
+- journal prestige, impact factor, or citation count
+- author reputation or h-index
+
+Rationale: paper quality and good writing are assumed to be learned from the corpus itself
+(medical papers are generally well written); the filter's only job is factuality. Do not add
+"quality" features, and do not let them stand in for truth.
+
+One distinction to keep straight: evidence tiers (publication type) ARE used, but they weigh the
+strength of the *retrieved evidence* used to judge a claim, not the quality of the paper under
+test. Judging the paper by its own design or sample size would be a quality filter, which this is
+not.
+
 
 ### Scope
 

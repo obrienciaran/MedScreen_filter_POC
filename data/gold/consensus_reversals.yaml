@@ -5,12 +5,19 @@
 # the landmark refuting study/SR/guideline that retrieval SHOULD surface. Every PMID
 # below was verified against PubMed esummary (title + year) at authoring time.
 #
+# A `reversed` entry also carries a `category`:
+#   * `reversal` (default): good-faith science later superseded; the disproving evidence
+#     is a newer trial/review found by keyword/high-tier search.
+#   * `fabrication`: research misconduct; the disproving evidence is a RETRACTION NOTICE,
+#     so retrieval must surface it via the retraction link, a different path worth
+#     measuring separately.
+#
 # `still_true` entries are controls: they should NOT be flagged as contradicted.
 # They measure the false-contradiction rate (a harness that flags everything has
 # perfect recall and zero value).
 #
-# This is a high-precision SEED set (10 reversals + 8 controls). Expand it before
-# treating any recall number as definitive — the metric's stability depends on N.
+# This is a high-precision SEED set (10 reversals + 4 fabrications + 8 controls). Expand it
+# before treating any recall number as definitive — the metric's stability depends on N.
 # Conditions are kept attached in `normalized` on purpose: condition-stripped claims
 # manufacture false refutations (the HCQ lesson).
 
@@ -144,6 +151,63 @@ entries:
     answer_key: ["17327526"]   # Bjelakovic meta-analysis, JAMA 2007
     reversal_year: 2007
     notes: "Meta-analysis found no reduction; some antioxidants associated with increased mortality."
+
+  # ------------------------------------------------------------- fabrication ----
+  # Research-misconduct cases. The claim is false because the data were fabricated or
+  # falsified, and the paper was formally retracted. The answer_key is the RETRACTION
+  # NOTICE, which retrieval should reach via the retracted paper's retraction link.
+  - id: wakefield-mmr-autism
+    claim_text: "The MMR vaccine causes autism / pervasive developmental disorder in children."
+    normalized:
+      intervention: "measles-mumps-rubella (MMR) vaccine"
+      outcome: "autism / pervasive developmental disorder"
+      population: "children"
+      direction: causes
+    status: reversed
+    category: fabrication
+    answer_key: ["20137807"]   # Lancet 2010 retraction of Wakefield et al. (PMID 9500320)
+    reversal_year: 2010
+    notes: "Falsified data; the Lancet fully retracted the 1998 paper in 2010."
+
+  - id: macchiarini-trachea
+    claim_text: "Stem-cell-seeded tissue-engineered tracheal transplantation is a safe, effective airway replacement."
+    normalized:
+      intervention: "tissue-engineered (stem-cell-seeded) tracheal transplant"
+      outcome: "safe, durable airway reconstruction and survival"
+      population: "patients with severe airway disease"
+      direction: prevents
+    status: reversed
+    category: fabrication
+    answer_key: ["37898523"]   # Lancet 2023 retraction of Macchiarini et al. (PMID 19022496)
+    reversal_year: 2023
+    notes: "Misrepresented outcomes; the 2008 Lancet paper was retracted in 2023."
+
+  - id: boldt-hes-cpb
+    claim_text: "High-dose balanced hydroxyethyl starch priming for cardiopulmonary bypass improves outcomes versus an albumin-based strategy."
+    normalized:
+      intervention: "high-dose balanced hydroxyethyl starch (HES) CPB priming"
+      outcome: "cardiac surgery outcomes / organ function"
+      population: "cardiac surgery patients on cardiopulmonary bypass"
+      comparator: "albumin-based priming"
+      direction: increases
+    status: reversed
+    category: fabrication
+    answer_key: ["21106980"]   # Anesth Analg 2010 retraction of Boldt et al. (PMID 19923501)
+    reversal_year: 2010
+    notes: "Fabricated data, no ethics approval; the 2009 A&A trial was retracted in 2010."
+
+  - id: obokata-stap
+    claim_text: "Somatic cells can be reprogrammed to pluripotency by transient environmental stress (STAP)."
+    normalized:
+      intervention: "stimulus-triggered acquisition of pluripotency (STAP) by environmental stress"
+      outcome: "pluripotency in somatic cells"
+      population: "mouse somatic cells"
+      direction: causes
+    status: reversed
+    category: fabrication
+    answer_key: ["24990753"]   # Nature 2014 retraction of Obokata et al. (PMID 24476887)
+    reversal_year: 2014
+    notes: "Fabricated/falsified data; both 2014 Nature STAP papers were retracted the same year."
 
   # ---------------------------------------------------------------- controls ----
   - id: ctrl-statins-cv

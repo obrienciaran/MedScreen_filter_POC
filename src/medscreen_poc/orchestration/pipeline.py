@@ -28,6 +28,24 @@ from ..transformation.extract import get_extractor
 from ..transformation.scoring import score_claim, score_paper
 from ..transformation.stance import classify_batch, get_stance_backend
 
+# A formal retraction is recorded in the paper's own XML as a RetractionIn link. It is the
+# strongest possible refutation and needs no retrieval, so it is checked first and short-
+# circuits the paper, skipping extraction, retrieval, and the stance LLM. Matches the
+# retraction evidence tier in ``schema.Candidate.evidence_tier``.
+RETRACTION_REFTYPE = "RetractionIn"
+RETRACTION_TIER = 0.95
+
+
+def _retracted_verdict(paper: PaperRecord, retraction_pmids: list[str]) -> PaperVerdict:
+    """Drop a formally retracted paper without any retrieval or LLM call."""
+    return PaperVerdict(
+        pmid=paper.pmid, title=paper.title, verdict=Verdict.REFUTED, score=0.0,
+        action=Action.DROP, verdict_basis="retraction", refutation_timing="subsequent",
+        n_claims=0, n_refuted_claims=0, top_refuting_tier=RETRACTION_TIER, grounded=False,
+        refuting_pmids=sorted(retraction_pmids),
+        notes="formally retracted (RetractionIn link in the paper's XML)",
+    )
+
 
 def run_paper(
     paper: PaperRecord,
@@ -43,6 +61,10 @@ def run_paper(
     ``stance_executor``, when supplied, is the shared pool every claim's stance calls run
     through, so a batch of papers does not each spin up its own nested pool.
     """
+    retraction_pmids = paper.comments_corrections.get(RETRACTION_REFTYPE, [])
+    if retraction_pmids:
+        return _retracted_verdict(paper, retraction_pmids)
+
     claim_verdicts = []
     for claim in extractor.extract(paper):
         candidates = retriever.retrieve(paper, claim, limit=limit)
@@ -74,7 +96,8 @@ def _run_paper_safe(
         print(f"ERROR scoring {paper.pmid}, keeping as unverified. {type(exc).__name__}: {exc}")
         return PaperVerdict(
             pmid=paper.pmid, title=paper.title, verdict=Verdict.UNVERIFIED, score=0.5,
-            action=Action.KEEP, n_claims=0, n_refuted_claims=0, top_refuting_tier=0.0,
+            action=Action.KEEP, verdict_basis="none", refutation_timing="unknown",
+            n_claims=0, n_refuted_claims=0, top_refuting_tier=0.0,
             notes=f"error: {type(exc).__name__}: {exc}",
         )
 
