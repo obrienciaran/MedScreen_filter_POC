@@ -33,12 +33,13 @@ queries succeed is the central failure mode, and exactly what the validation mea
 
 Scoring is mechanical, not a model opinion. Thresholds live in `transformation/scoring.py`.
 
-0. Retraction fast path. If the paper's own XML carries a `RetractionIn` link, it is formally
-   retracted: drop it immediately with `verdict_basis = retraction`, skipping extraction,
-   retrieval, and the stance model. This is the cheapest and strongest signal, so it runs
-   first. Every other paper is scored on retrieved evidence (`verdict_basis = evidence`). A
-   present retraction link is reliable; its absence is not proof a paper was not retracted
-   (indexing lag), so the evidence path still runs for everything else.
+0. Retraction fast path. If the paper's own XML shows it is formally retracted, either via a
+   `RetractionIn` link or the `Retracted Publication` publication type, drop it immediately with
+   `verdict_basis = retraction`, skipping extraction, retrieval, and the stance model. This is
+   the cheapest and strongest signal, so it runs first (the pub type covers the case where the
+   link has not yet propagated). Every other paper is scored on retrieved evidence
+   (`verdict_basis = evidence`). A present retraction signal is reliable; its absence is not
+   proof a paper was not retracted (indexing lag), so the evidence path still runs otherwise.
 1. Weigh each study by its publication-type evidence tier (guideline 1.0, retraction 0.95,
    systematic review 0.9, meta-analysis 0.85, RCT 0.8, observational 0.5, case report 0.2, else
    0.4). Its pull on a claim is that tier × the model's stance confidence.

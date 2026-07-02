@@ -1,11 +1,27 @@
 from pathlib import Path
 
-from medscreen_poc.orchestration.pipeline import run_filter
+from medscreen_poc.orchestration.pipeline import run_filter, run_paper
 from medscreen_poc.reporting.graph import build_paper_graph_data, render_html
+from medscreen_poc.scraping.evidence import StubRetriever
+from medscreen_poc.transformation.extract import StubExtractor
 from medscreen_poc.transformation.ingest import parse_pubmed_xml
-from medscreen_poc.schema import Action, Verdict
+from medscreen_poc.transformation.stance import StubStance
+from medscreen_poc.schema import Action, PaperRecord, Verdict
 
 FIXTURE = Path(__file__).parent / "fixtures" / "efetch_sample.xml"
+
+
+def test_retracted_pubtype_short_circuits_without_link():
+    # A paper marked "Retracted Publication" but with no RetractionIn link is still dropped by
+    # the cheap fast path, before any extraction, retrieval, or stance call.
+    paper = PaperRecord(pmid="7", title="x", pub_types=["Journal Article", "Retracted Publication"])
+    v = run_paper(paper, extractor=StubExtractor(), retriever=StubRetriever(),
+                  stance_backend=StubStance())
+    assert v.verdict is Verdict.REFUTED
+    assert v.action is Action.DROP
+    assert v.verdict_basis == "retraction"
+    assert v.refuting_pmids == []
+    assert "Retracted Publication" in v.notes
 
 
 def test_filter_end_to_end_stub():

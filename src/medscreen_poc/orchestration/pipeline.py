@@ -28,22 +28,37 @@ from ..transformation.extract import get_extractor
 from ..transformation.scoring import score_claim, score_paper
 from ..transformation.stance import classify_batch, get_stance_backend
 
-# A formal retraction is recorded in the paper's own XML as a RetractionIn link. It is the
-# strongest possible refutation and needs no retrieval, so it is checked first and short-
-# circuits the paper, skipping extraction, retrieval, and the stance LLM. Matches the
-# retraction evidence tier in ``schema.Candidate.evidence_tier``.
+# A formal retraction is the strongest possible refutation and needs no retrieval, so it is
+# checked first and short-circuits the paper, skipping extraction, retrieval, and the stance
+# LLM. Two independent signals in the paper's own XML, either is sufficient: a RetractionIn
+# link, or the "Retracted Publication" publication type. The pub type covers the case where the
+# link has not (yet) propagated into the record. Matches the retraction evidence tier in
+# ``schema.Candidate.evidence_tier``.
 RETRACTION_REFTYPE = "RetractionIn"
+RETRACTED_PUB_TYPE = "retracted publication"
 RETRACTION_TIER = 0.95
+
+
+def _retraction_signal(paper: PaperRecord) -> tuple[bool, list[str]]:
+    """Whether the paper is formally retracted, and any linked retraction-notice PMIDs.
+
+    Returns the notice PMIDs when the RetractionIn link is present; an empty list when only the
+    publication type marks the retraction.
+    """
+    retraction_pmids = paper.comments_corrections.get(RETRACTION_REFTYPE, [])
+    has_pub_type = any(pt.lower() == RETRACTED_PUB_TYPE for pt in paper.pub_types)
+    return bool(retraction_pmids) or has_pub_type, retraction_pmids
 
 
 def _retracted_verdict(paper: PaperRecord, retraction_pmids: list[str]) -> PaperVerdict:
     """Drop a formally retracted paper without any retrieval or LLM call."""
+    signal = "RetractionIn link" if retraction_pmids else "Retracted Publication type"
     return PaperVerdict(
         pmid=paper.pmid, title=paper.title, verdict=Verdict.REFUTED, score=0.0,
         action=Action.DROP, verdict_basis="retraction", refutation_timing="subsequent",
         n_claims=0, n_refuted_claims=0, top_refuting_tier=RETRACTION_TIER, grounded=False,
         refuting_pmids=sorted(retraction_pmids),
-        notes="formally retracted (RetractionIn link in the paper's XML)",
+        notes=f"formally retracted ({signal} in the paper's XML)",
     )
 
 
@@ -61,8 +76,8 @@ def run_paper(
     ``stance_executor``, when supplied, is the shared pool every claim's stance calls run
     through, so a batch of papers does not each spin up its own nested pool.
     """
-    retraction_pmids = paper.comments_corrections.get(RETRACTION_REFTYPE, [])
-    if retraction_pmids:
+    is_retracted, retraction_pmids = _retraction_signal(paper)
+    if is_retracted:
         return _retracted_verdict(paper, retraction_pmids)
 
     claim_verdicts = []
