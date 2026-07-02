@@ -29,30 +29,40 @@ HIGH_TIER_PUBMED = (
 # Contradiction-seeking fragment. "no benefit" stays quoted as a genuine short phrase.
 _CONTRADICTION_PUBMED = '(risk OR harm OR mortality OR increased OR "no benefit" OR retracted)'
 
+# Words that must act as boolean operators, not search terms. A claim like "encainide or
+# flecainide" carries a lowercase "or"; left as-is, PubMed and Europe PMC treat it as the
+# literal term "or" and quietly narrow the search, so it is uppercased to the operator.
+_BOOLEAN_OPERATORS = {"and", "or", "not"}
+
 
 def _sanitize(term: str | None) -> str:
     """Reduce a prose claim term to a plain keyword string.
 
     Drops parenthetical annotations (``"stress and gastric acid (etiologic claim)"`` carries
     the note ``(etiologic claim)``) and punctuation, while keeping hyphens so tokens like
-    ``beta-carotene`` survive. Returns an empty string for empty input.
+    ``beta-carotene`` survive. Standalone and/or/not are uppercased to boolean operators.
+    Returns an empty string for empty input.
     """
     if not term:
         return ""
     without_parens = re.sub(r"\([^)]*\)", " ", term)
     without_punct = re.sub(r"[^\w\s-]", " ", without_parens)
-    return re.sub(r"\s+", " ", without_punct).strip()
+    cleaned = re.sub(r"\s+", " ", without_punct).strip()
+    return " ".join(
+        tok.upper() if tok.lower() in _BOOLEAN_OPERATORS else tok for tok in cleaned.split()
+    )
 
 
 def _core_terms(claim: NormalizedClaim) -> str:
     """The intervention-and-outcome core both providers build their queries from.
 
-    Returns an empty string when neither term survives sanitization, which the callers treat
-    as "nothing searchable" and return no queries.
+    Each term is wrapped in parentheses so an embedded operator (``encainide OR flecainide``)
+    groups correctly when ANDed with the other term, instead of leaking into ``A OR B AND C``.
+    Returns an empty string when neither term survives sanitization, which the callers treat as
+    "nothing searchable" and return no queries.
     """
-    intervention = _sanitize(claim.intervention)
-    outcome = _sanitize(claim.outcome)
-    return " AND ".join(t for t in (intervention, outcome) if t)
+    terms = [t for t in (_sanitize(claim.intervention), _sanitize(claim.outcome)) if t]
+    return " AND ".join(f"({t})" for t in terms)
 
 
 def _dedup(queries: list[str]) -> list[str]:

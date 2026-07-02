@@ -23,6 +23,17 @@ def test_pubmed_queries_include_core_and_contradiction():
     assert len(qs) == len(set(qs))
 
 
+def test_embedded_or_becomes_boolean_operator_and_is_grouped():
+    # "encainide or flecainide" must query (encainide OR flecainide), not require the word "or".
+    c = NormalizedClaim(intervention="encainide or flecainide (class Ic antiarrhythmics)",
+                        outcome="mortality")
+    core = query.pubmed_queries(c)[0]
+    assert "(encainide OR flecainide)" in core
+    assert " or " not in core  # no lowercase operator left as a search term
+    # the intervention group is ANDed with the outcome, precedence preserved by parentheses
+    assert "(encainide OR flecainide) AND (mortality)" in core
+
+
 def test_europepmc_queries_nonempty_and_unique():
     qs = query.europepmc_queries(_claim())
     assert qs and all(qs)
