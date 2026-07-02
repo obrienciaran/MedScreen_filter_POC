@@ -11,13 +11,12 @@ XML only. This source is queried to find studies that contradict or debate a cla
 from __future__ import annotations
 
 import json
-import time
 
 import httpx
 
 from ..schema import Candidate, NormalizedClaim
 from ..transformation import query
-from .http import generic_throttle, make_client
+from .http import generic_throttle, get_with_retry, make_client
 from .querycache import get_query_cache
 
 _SEARCH = "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
@@ -55,18 +54,9 @@ def search(query: str, *, page_size: int = 50, client: httpx.Client | None = Non
             "pageSize": str(page_size),
             "resultType": "core",  # includes abstractText and pubTypeList
         }
-        # Europe PMC occasionally answers a 502/503 under load. Back off and retry rather
-        # than abort the run on a transient gateway error.
-        delay = 1.0
-        for attempt in range(5):
-            generic_throttle()
-            r = client.get(_SEARCH, params=params)
-            if (r.status_code == 429 or r.status_code >= 500) and attempt < 4:
-                time.sleep(delay)
-                delay = min(delay * 2, 15.0)
-                continue
-            break
-        r.raise_for_status()
+        # Europe PMC occasionally answers a 429/5xx under load; the shared helper backs off
+        # and retries rather than aborting the run on a transient gateway error.
+        r = get_with_retry(client, _SEARCH, params, throttle=generic_throttle)
         candidates = parse_search_json(r.json())
         if cache is not None:
             cache.put("europepmc", query, page_size,

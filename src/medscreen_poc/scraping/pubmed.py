@@ -13,39 +13,26 @@ handling.
 from __future__ import annotations
 
 import json
-import time
 import xml.etree.ElementTree as ET
 
 import httpx
 
 from ..schema import Candidate, NormalizedClaim
 from ..transformation import medline, query
-from .http import make_client, ncbi_params, ncbi_throttle
+from .http import get_with_retry, make_client, ncbi_params, ncbi_throttle
 from .querycache import get_query_cache
 
 _EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 
 
 def _ncbi_get(client: httpx.Client, url: str, params: dict[str, str]) -> httpx.Response:
-    """GET an E-utilities endpoint, retrying on 429/5xx with backoff.
+    """GET an E-utilities endpoint through the NCBI throttle, retrying on 429/5xx.
 
     Without an API key NCBI caps callers at ~3 req/s and answers a burst with 429. The
-    shared limiter stays just under that, but leaves no headroom, so back off and retry
-    rather than let a transient throttle abort a long run.
+    shared limiter stays just under that with no headroom, so the retry policy in
+    ``get_with_retry`` covers a transient throttle rather than aborting a long run.
     """
-    delay = 1.0
-    for attempt in range(5):
-        ncbi_throttle()
-        r = client.get(url, params=params)
-        if r.status_code == 429 or r.status_code >= 500:
-            if attempt < 4:
-                time.sleep(delay)
-                delay = min(delay * 2, 15.0)
-                continue
-        r.raise_for_status()
-        return r
-    r.raise_for_status()
-    return r
+    return get_with_retry(client, url, params, throttle=ncbi_throttle)
 
 
 class PubMedSource:

@@ -130,17 +130,20 @@ def classify_batch(
     gold: GoldEntry,
     candidates: list[Candidate],
     max_workers: int | None = None,
+    *,
+    executor: ThreadPoolExecutor | None = None,
 ) -> list[StanceLabel]:
     """Classify candidates concurrently, preserving input order.
 
     Stance calls against an LLM backend are independent network-bound requests, so they fan
-    out across a thread pool (``MEDSCREEN_STANCE_CONCURRENCY``, default 8). The stub backend
-    runs through the same path harmlessly.
+    out across a thread pool. Pass ``executor`` to reuse one shared pool across many claims
+    (the filter does this so total LLM concurrency is a single bound, not the product of the
+    paper and stance worker counts). With no ``executor`` a private pool is created, sized by
+    ``MEDSCREEN_STANCE_CONCURRENCY`` (default 8). The stub backend runs the same path
+    harmlessly.
     """
     if not candidates:
         return []
-    workers = max_workers or int(os.environ.get("MEDSCREEN_STANCE_CONCURRENCY", "8"))
-    workers = max(1, min(workers, len(candidates)))
 
     def _classify(c: Candidate) -> StanceLabel:
         try:
@@ -153,5 +156,9 @@ def classify_batch(
                 confidence=0.0, rationale=f"error: {type(exc).__name__}: {exc}", condition_match=None,
             )
 
-    with ThreadPoolExecutor(max_workers=workers) as executor:
+    if executor is not None:
         return list(executor.map(_classify, candidates))
+    workers = max_workers or int(os.environ.get("MEDSCREEN_STANCE_CONCURRENCY", "8"))
+    workers = max(1, min(workers, len(candidates)))
+    with ThreadPoolExecutor(max_workers=workers) as own:
+        return list(own.map(_classify, candidates))

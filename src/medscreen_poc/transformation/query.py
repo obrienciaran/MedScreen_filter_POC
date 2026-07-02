@@ -44,6 +44,17 @@ def _sanitize(term: str | None) -> str:
     return re.sub(r"\s+", " ", without_punct).strip()
 
 
+def _core_terms(claim: NormalizedClaim) -> str:
+    """The intervention-and-outcome core both providers build their queries from.
+
+    Returns an empty string when neither term survives sanitization, which the callers treat
+    as "nothing searchable" and return no queries.
+    """
+    intervention = _sanitize(claim.intervention)
+    outcome = _sanitize(claim.outcome)
+    return " AND ".join(t for t in (intervention, outcome) if t)
+
+
 def _dedup(queries: list[str]) -> list[str]:
     """Drop empty and duplicate queries while preserving order."""
     seen: set[str] = set()
@@ -64,9 +75,7 @@ def pubmed_queries(claim: NormalizedClaim) -> list[str]:
     reviews that overturn consensus, and a contradiction-seeking rung. A core-plus-population
     rung was dropped because it added no answer key the others missed and tended to over-narrow.
     """
-    intervention = _sanitize(claim.intervention)
-    outcome = _sanitize(claim.outcome)
-    core = " AND ".join(t for t in (intervention, outcome) if t)
+    core = _core_terms(claim)
     if not core:
         return []
     queries = [
@@ -79,9 +88,7 @@ def pubmed_queries(claim: NormalizedClaim) -> list[str]:
 
 def europepmc_queries(claim: NormalizedClaim) -> list[str]:
     """Ordered Europe PMC queries, mirroring the PubMed core and high-tier rungs."""
-    intervention = _sanitize(claim.intervention)
-    outcome = _sanitize(claim.outcome)
-    core = " AND ".join(t for t in (intervention, outcome) if t)
+    core = _core_terms(claim)
     if not core:
         return []
     high_tier = (

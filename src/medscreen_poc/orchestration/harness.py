@@ -149,9 +149,8 @@ def run_claim(
     answer_set = set(gold.answer_key)
     retrieved_keys = [k for k in answer_set if k in by_id]
     answer_key_retrieved = bool(retrieved_keys)
-    answer_key_rank = min((rank_of.get(k, 10**9) for k in retrieved_keys), default=None)
-    if answer_key_rank == 10**9:
-        answer_key_rank = None
+    key_ranks = [rank_of[k] for k in retrieved_keys if k in rank_of]
+    answer_key_rank = min(key_ranks, default=None)
 
     # Stance only on the top-K by semantic rank, but always include answer-key docs.
     top_ids = [ext_id for ext_id, _ in ranked[:STANCE_TOP_K]]

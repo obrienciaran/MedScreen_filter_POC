@@ -12,6 +12,7 @@ from __future__ import annotations
 import os
 import threading
 import time
+from typing import Callable
 
 import httpx
 
@@ -74,3 +75,31 @@ def ncbi_throttle() -> None:
 
 def generic_throttle() -> None:
     _generic_limiter.wait()
+
+
+def get_with_retry(
+    client: httpx.Client,
+    url: str,
+    params: dict[str, str],
+    *,
+    throttle: Callable[[], None],
+    attempts: int = 5,
+    max_delay: float = 15.0,
+) -> httpx.Response:
+    """GET ``url`` through ``throttle``, retrying on 429/5xx with exponential backoff.
+
+    PubMed and Europe PMC both answer a burst with 429 or a transient 5xx gateway error, so
+    back off and retry rather than abort a long run. Any other status raises via
+    ``raise_for_status``. Shared by both sources so the backoff policy lives in one place.
+    """
+    delay = 1.0
+    for attempt in range(attempts):
+        throttle()
+        r = client.get(url, params=params)
+        if (r.status_code == 429 or r.status_code >= 500) and attempt < attempts - 1:
+            time.sleep(delay)
+            delay = min(delay * 2, max_delay)
+            continue
+        r.raise_for_status()
+        return r
+    return r  # unreachable: the final attempt returns or raises inside the loop

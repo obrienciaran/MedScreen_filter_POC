@@ -19,8 +19,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from medscreen_poc.graph import build_graph_data, render_html
-from medscreen_poc.harness import load_gold
+from medscreen_poc.orchestration.harness import load_gold
+from medscreen_poc.reporting.graph import build_graph_data, render_html
 from medscreen_poc.schema import Candidate, ClaimStatus, GoldEntry, Stance, StanceLabel
 from medscreen_poc.store import Store
 

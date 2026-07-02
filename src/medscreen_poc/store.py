@@ -136,12 +136,16 @@ class Store:
             "DELETE FROM claim_retrieval WHERE claim_id = ? AND channel = ?",
             [claim_id, channel],
         )
-        for rank, (ext_id, score) in enumerate(ranked_ext_ids, start=1):
-            self.con.execute(
-                "INSERT INTO claim_retrieval VALUES (?,?,?,?,?) "
-                "ON CONFLICT DO NOTHING",
-                [claim_id, channel, ext_id, rank, score],
-            )
+        if not ranked_ext_ids:
+            return
+        # The delete above clears this claim/channel first, so the fresh rows cannot conflict.
+        self.con.executemany(
+            "INSERT INTO claim_retrieval VALUES (?,?,?,?,?)",
+            [
+                [claim_id, channel, ext_id, rank, score]
+                for rank, (ext_id, score) in enumerate(ranked_ext_ids, start=1)
+            ],
+        )
 
     def get_retrieval(self, claim_id: str, channel: str) -> list[str]:
         rows = self.con.execute(

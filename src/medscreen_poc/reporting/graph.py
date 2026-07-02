@@ -451,7 +451,8 @@ def _stats_html(data: GraphData) -> str:
     gaps = sum(1 for e in data.edges if e.kind == "missing")
     if gaps:
         cards.append((gaps, "recall gaps", "gap"))
-    retractions = sum(1 for e in data.edges if e.kind == "retraction") // 2
+    # Each retraction pair is a single edge (notice to paper), so count edges directly.
+    retractions = sum(1 for e in data.edges if e.kind == "retraction")
     if retractions:
         cards.append((retractions, "retraction links", ""))
     return "".join(
@@ -564,10 +565,9 @@ _TEMPLATE = r"""<!DOCTYPE html>
   .swatch { width: 22px; height: 0; border-top-width: 3px; border-top-style: solid; flex: 0 0 22px; }
   .swatch.dash { border-top-style: dashed; }
   .legend-item { display: flex; align-items: center; gap: 9px; font-size: 12.5px; padding: 3px 0; color: #495057; }
-  .dot, .box, .star, .tri { flex: 0 0 16px; text-align: center; }
+  .dot, .box, .tri { flex: 0 0 16px; text-align: center; }
   .dot { flex: 0 0 14px; width: 14px; height: 14px; border-radius: 50%; border: 1px solid; }
   .box { width: 16px; height: 12px; border-radius: 2px; }
-  .star { width: 16px; height: 0; font-size: 16px; line-height: 1; }
   .tri { width: 16px; height: 0; font-size: 14px; line-height: 1; }
   button { width: 100%; margin-top: 8px; padding: 8px; border: 1px solid var(--line); background: #fff; border-radius: 8px; font-size: 12.5px; cursor: pointer; }
   button:hover { background: var(--bg); }
