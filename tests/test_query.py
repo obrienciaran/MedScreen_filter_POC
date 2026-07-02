@@ -34,6 +34,16 @@ def test_embedded_or_becomes_boolean_operator_and_is_grouped():
     assert "(encainide OR flecainide) AND (mortality)" in core
 
 
+def test_pubmed_queries_have_retraction_targeted_rung():
+    # A rung pairing the intervention with the retracted-publication filter, outcome dropped, so
+    # link expansion can reach a retraction notice (the fabrication path).
+    qs = query.pubmed_queries(_claim())
+    assert any(
+        '"Retracted Publication"[pt]' in q and "hydroxychloroquine" in q and "mortality" not in q
+        for q in qs
+    )
+
+
 def test_europepmc_queries_nonempty_and_unique():
     qs = query.europepmc_queries(_claim())
     assert qs and all(qs)

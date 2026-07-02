@@ -29,6 +29,11 @@ HIGH_TIER_PUBMED = (
 # Contradiction-seeking fragment. "no benefit" stays quoted as a genuine short phrase.
 _CONTRADICTION_PUBMED = '(risk OR harm OR mortality OR increased OR "no benefit" OR retracted)'
 
+# Retracted-publication filter. Paired with the intervention alone, it surfaces retracted work
+# on the topic; link expansion then follows that paper's RetractionIn to the retraction notice,
+# which is the disproving evidence for a fabrication (a paper echoing a retracted claim).
+_RETRACTED_PUBMED = '"Retracted Publication"[pt]'
+
 # Words that must act as boolean operators, not search terms. A claim like "encainide or
 # flecainide" carries a lowercase "or"; left as-is, PubMed and Europe PMC treat it as the
 # literal term "or" and quietly narrow the search, so it is uppercased to the operator.
@@ -79,12 +84,15 @@ def _dedup(queries: list[str]) -> list[str]:
 def pubmed_queries(claim: NormalizedClaim) -> list[str]:
     """Ordered PubMed queries; the caller unions the results.
 
-    Three rungs, chosen because a per-rung contribution check on the gold slice found these
-    cover every answer key a wider set did, so retrieval stays the same while the query count
-    per claim stays low: ``core`` for broad relevance, ``high-tier`` to surface the trials and
-    reviews that overturn consensus, and a contradiction-seeking rung. A core-plus-population
-    rung was dropped because it added no answer key the others missed and tended to over-narrow.
+    Four rungs: ``core`` for broad relevance, ``high-tier`` to surface the trials and reviews
+    that overturn consensus, a contradiction-seeking rung, and a retraction-targeted rung. The
+    last pairs the intervention alone with the retracted-publication filter to reach retracted
+    work whose retraction notice is then followed by link expansion (the fabrication path,
+    validated on the gold slice: it recovers Macchiarini and Obokata). It drops the outcome
+    because a descriptive outcome over-narrows, and the pt filter keeps the rung tiny. A
+    core-plus-population rung was dropped earlier as it added no answer key the others missed.
     """
+    intervention = _sanitize(claim.intervention)
     core = _core_terms(claim)
     if not core:
         return []
@@ -93,6 +101,8 @@ def pubmed_queries(claim: NormalizedClaim) -> list[str]:
         f"{core} AND {HIGH_TIER_PUBMED}",        # high-tier: surfaces landmark trials / reviews
         f"{core} AND {_CONTRADICTION_PUBMED}",   # contradiction-seeking
     ]
+    if intervention:
+        queries.append(f"({intervention}) AND {_RETRACTED_PUBMED}")  # retraction-targeted
     return _dedup(queries)
 
 

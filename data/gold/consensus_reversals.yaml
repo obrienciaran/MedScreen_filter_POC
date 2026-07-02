@@ -199,9 +199,9 @@ entries:
   - id: obokata-stap
     claim_text: "Somatic cells can be reprogrammed to pluripotency by transient environmental stress (STAP)."
     normalized:
-      intervention: "stimulus-triggered acquisition of pluripotency (STAP) by environmental stress"
+      intervention: "stimulus-triggered acquisition of pluripotency (STAP)"
       outcome: "pluripotency in somatic cells"
-      population: "mouse somatic cells"
+      population: "mouse somatic cells exposed to environmental stress"
       direction: causes
     status: reversed
     category: fabrication
