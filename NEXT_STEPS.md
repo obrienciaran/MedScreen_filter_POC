@@ -9,7 +9,7 @@ research papers (PubMed XML), plus a validation harness that measures one depend
 retrieval recall — on a labeled evaluation set. An LLM is used only for two bounded steps
 (claim extraction and stance labeling); it does not run retrieval or decide the verdict.
 
-## Where things stand (as of commit `7e6c6a4`)
+## Where things stand (as of commit `ab4b919`)
 
 - **Retrieval recall: 90% (18/20 positive cases)**, measured model-free (no LLM) via
   `medscreen-build-cache` + `medscreen-run --use-cache`.
@@ -19,20 +19,13 @@ retrieval recall — on a labeled evaluation set. An LLM is used only for two bo
 - **`eval/` folder** now documents all evaluation (harness metrics, case studies, extraction).
 - **Labeled set: 32 cases** = 20 positives (16 "reversal", 4 "fabrication") + 12 controls, in
   `data/gold/consensus_reversals.yaml`, spread across varied topic domains.
-- **41 tests pass** (`.venv/bin/python -m pytest -q`; 1 live network test deselected by default).
+- **44 tests pass** (`.venv/bin/python -m pytest -q`; 1 live network test deselected by default).
 - Two remaining retrieval misses, both **accepted** (see philosophy below):
   - A case where the claim and its disproving source share only the broad topic and use
     different vocabulary, so lexical/keyword search cannot bridge them without already encoding
     the answer. Needs semantic query expansion.
   - A case where the disproving source is buried among many similar high-tier sources that the
     query cannot disambiguate.
-
-### Recent commits (newest first)
-- `8fa04d5` Grow labeled set to 32 cases and add a condition-focused query rung
-- `1693206` Retraction-targeted query rung recovers the retracted-source path
-- `d706648` Treat and/or/not as boolean operators in query construction
-- `3fd348f` Extend retraction fast path to the Retracted Publication publication type
-- `0476899` Precision-first drop policy, provenance flags, and retracted-source cases
 
 ## Next steps (priority order)
 
@@ -54,16 +47,6 @@ commit the result.
 ### 2. Faithful precision re-measure (can happen soon)
 Precision was measured once but with stub ranking. A faithful re-run wants
 `sentence-transformers` installed (`embed` extra) plus a real stance backend.
-
-## Done since the last handoff
-- **Claim-extraction eval built**: 24 reference claims authored (strong model),
-  `eval/extraction/score.py` scoring script (unit-tested), offline-validated. Only the live
-  extractor run + committing `results.md` remain (see step 1).
-- **Condition-rung precision VALIDATED** (single real Gemini 2.5 Flash Lite run): 85% stance
-  recall, 25% soft false-contradiction, **0/12 false drops**. No precision penalty; rung kept.
-- **Drop case study added** (`data/retracted_drop_live/` -> `reports/retracted_drop_case_study.*`),
-  alongside the existing `ungrounded` case study (`data/bixonimania_live/`).
-- **`eval/` folder created**, documenting harness metrics, case studies, and the extraction eval.
 
 ## Not doing (decided)
 - Growing the gold set — it is a POC; current size (32) is fine.
@@ -90,7 +73,9 @@ Precision was measured once but with stub ranking. A faithful re-run wants
   per-claim `claim_scores` and `refuting_confidence`.
 
 ## Environment gotchas
-- `GEMINI_API_KEY` is FREE-TIER (20 req/day) — cannot do full LLM runs.
+- `GEMINI_API_KEY` is free-tier (20 req/day) — fine for small runs (e.g. the ~10-call extraction
+  eval), too little for a full harness run (~640 calls). A separate paid key `GEMINI_API_KEY_PAID`
+  exists but was a deliberate one-time run — do not reuse it.
 - `sentence-transformers` NOT installed -> sbert ranking unavailable (stub fallback = random
   ranking). Install the `embed` extra for real ranking.
 - Bash outbound network is sometimes gated/denied; `WebFetch` worked for the PubMed E-utilities
