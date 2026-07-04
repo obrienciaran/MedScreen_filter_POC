@@ -84,15 +84,18 @@ def _dedup(queries: list[str]) -> list[str]:
 def pubmed_queries(claim: NormalizedClaim) -> list[str]:
     """Ordered PubMed queries; the caller unions the results.
 
-    Four rungs: ``core`` for broad relevance, ``high-tier`` to surface the trials and reviews
-    that overturn consensus, a contradiction-seeking rung, and a retraction-targeted rung. The
-    last pairs the intervention alone with the retracted-publication filter to reach retracted
-    work whose retraction notice is then followed by link expansion (the fabrication path,
-    validated on the gold slice: it recovers Macchiarini and Obokata). It drops the outcome
-    because a descriptive outcome over-narrows, and the pt filter keeps the rung tiny. A
-    core-plus-population rung was dropped earlier as it added no answer key the others missed.
+    Rungs: ``core`` for broad relevance, ``high-tier`` to surface the trials and reviews that
+    overturn consensus, a contradiction-seeking rung, a retraction-targeted rung, and a
+    condition-focused rung. The retraction rung pairs the intervention with the retracted-
+    publication filter to reach retracted work whose retraction notice is then followed by link
+    expansion (the fabrication path: it recovers Macchiarini and Obokata). The condition rung
+    pairs the intervention with the population instead of the outcome, under the high-tier
+    filter: a descriptive outcome over-narrows and buries a landmark trial, while the condition
+    (a disease name) is the clean discriminator that pins it (validated on the gold slice: it
+    recovers arthroscopy and PCI). Both drop the outcome on purpose and stay tightly filtered.
     """
     intervention = _sanitize(claim.intervention)
+    population = _sanitize(claim.population)
     core = _core_terms(claim)
     if not core:
         return []
@@ -103,16 +106,25 @@ def pubmed_queries(claim: NormalizedClaim) -> list[str]:
     ]
     if intervention:
         queries.append(f"({intervention}) AND {_RETRACTED_PUBMED}")  # retraction-targeted
+    if intervention and population:
+        queries.append(f"({intervention}) AND ({population}) AND {HIGH_TIER_PUBMED}")  # condition-focused
     return _dedup(queries)
 
 
+_EUROPEPMC_HIGH_TIER = (
+    'PUB_TYPE:"Meta-Analysis" OR PUB_TYPE:"Systematic Review" '
+    'OR PUB_TYPE:"Randomized Controlled Trial"'
+)
+
+
 def europepmc_queries(claim: NormalizedClaim) -> list[str]:
-    """Ordered Europe PMC queries, mirroring the PubMed core and high-tier rungs."""
+    """Ordered Europe PMC queries, mirroring the PubMed core, high-tier, and condition rungs."""
+    intervention = _sanitize(claim.intervention)
+    population = _sanitize(claim.population)
     core = _core_terms(claim)
     if not core:
         return []
-    high_tier = (
-        f"({core}) AND (PUB_TYPE:\"Meta-Analysis\" OR PUB_TYPE:\"Systematic Review\" "
-        f'OR PUB_TYPE:"Randomized Controlled Trial")'
-    )
-    return _dedup([core, high_tier])
+    queries = [core, f"({core}) AND ({_EUROPEPMC_HIGH_TIER})"]
+    if intervention and population:
+        queries.append(f"({intervention}) AND ({population}) AND ({_EUROPEPMC_HIGH_TIER})")
+    return _dedup(queries)

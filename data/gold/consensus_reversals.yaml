@@ -16,7 +16,7 @@
 # They measure the false-contradiction rate (a harness that flags everything has
 # perfect recall and zero value).
 #
-# This is a high-precision SEED set (10 reversals + 4 fabrications + 8 controls). Expand it
+# This is a high-precision SEED set (16 reversals + 4 fabrications + 12 controls). Expand it
 # before treating any recall number as definitive — the metric's stability depends on N.
 # Conditions are kept attached in `normalized` on purpose: condition-stripped claims
 # manufacture false refutations (the HCQ lesson).
@@ -116,7 +116,7 @@ entries:
   - id: tight-glycemic-icu
     claim_text: "Tight (intensive) glucose control reduces mortality in critically ill patients."
     normalized:
-      intervention: "intensive insulin therapy for tight glucose control"
+      intervention: "intensive glucose control"
       outcome: "mortality"
       population: "critically ill ICU patients"
       comparator: "conventional glucose control"
@@ -124,7 +124,7 @@ entries:
     status: reversed
     answer_key: ["19318384"]   # NICE-SUGAR, NEJM 2009
     reversal_year: 2009
-    notes: "Earlier single-center trial (PMID 11794168) supported it; NICE-SUGAR found increased mortality."
+    notes: "Delivered via intensive insulin therapy. Earlier single-center trial (PMID 11794168) supported it; NICE-SUGAR found increased mortality."
 
   - id: estrogen-dementia
     claim_text: "Estrogen plus progestin therapy reduces the risk of dementia in postmenopausal women."
@@ -151,6 +151,84 @@ entries:
     answer_key: ["17327526"]   # Bjelakovic meta-analysis, JAMA 2007
     reversal_year: 2007
     notes: "Meta-analysis found no reduction; some antioxidants associated with increased mortality."
+
+  - id: arthroscopy-knee-oa
+    claim_text: "Arthroscopic surgery (debridement and lavage) relieves pain and improves function in osteoarthritis of the knee."
+    normalized:
+      intervention: "arthroscopic surgery"
+      outcome: "knee pain and physical function"
+      population: "patients with osteoarthritis of the knee"
+      comparator: "sham (placebo) surgery"
+      direction: decreases
+    status: reversed
+    answer_key: ["12110735"]   # Moseley, NEJM 2002 (sham-controlled)
+    reversal_year: 2002
+    notes: "Sham-controlled trial found no benefit over placebo surgery."
+
+  - id: pci-stable-angina
+    claim_text: "Percutaneous coronary intervention (stenting) reduces death and myocardial infarction in stable coronary artery disease."
+    normalized:
+      intervention: "percutaneous coronary intervention"
+      outcome: "death or myocardial infarction"
+      population: "patients with stable coronary artery disease"
+      comparator: "optimal medical therapy"
+      direction: decreases
+    status: reversed
+    answer_key: ["17387127"]   # COURAGE, NEJM 2007
+    reversal_year: 2007
+    notes: "COURAGE found PCI added to medical therapy did not reduce death or MI in stable disease."
+
+  - id: vertebroplasty-fracture
+    claim_text: "Vertebroplasty relieves pain from osteoporotic vertebral compression fractures."
+    normalized:
+      intervention: "vertebroplasty"
+      outcome: "back pain and disability"
+      population: "patients with painful osteoporotic vertebral compression fractures"
+      comparator: "sham procedure"
+      direction: decreases
+    status: reversed
+    answer_key: ["19657121"]   # Buchbinder, NEJM 2009 (sham-controlled)
+    reversal_year: 2009
+    notes: "Two 2009 sham-controlled trials found no benefit over a sham procedure."
+
+  - id: drotrecogin-sepsis
+    claim_text: "Drotrecogin alfa (activated protein C) reduces mortality in severe sepsis and septic shock."
+    normalized:
+      intervention: "drotrecogin alfa activated protein C"
+      outcome: "mortality"
+      population: "adults with severe sepsis or septic shock"
+      comparator: "placebo"
+      direction: decreases
+    status: reversed
+    answer_key: ["22616830"]   # PROWESS-SHOCK, NEJM 2012
+    reversal_year: 2012
+    notes: "PROWESS-SHOCK found no survival benefit; the drug was withdrawn from market."
+
+  - id: steroids-tbi
+    claim_text: "High-dose corticosteroids reduce mortality in adults with acute traumatic brain injury."
+    normalized:
+      intervention: "corticosteroids"
+      outcome: "mortality"
+      population: "adults with acute traumatic brain injury"
+      comparator: "placebo"
+      direction: decreases
+    status: reversed
+    answer_key: ["15474134"]   # CRASH, Lancet 2004
+    reversal_year: 2004
+    notes: "CRASH found corticosteroids increased death; the intervention was harmful."
+
+  - id: rosiglitazone-cv-safe
+    claim_text: "Rosiglitazone is a cardiovascularly safe treatment for type 2 diabetes."
+    normalized:
+      intervention: "rosiglitazone"
+      outcome: "myocardial infarction and cardiovascular death"
+      population: "patients with type 2 diabetes"
+      comparator: "placebo or other antidiabetic therapy"
+      direction: no_effect
+    status: reversed
+    answer_key: ["17517853"]   # Nissen & Wolski meta-analysis, NEJM 2007
+    reversal_year: 2007
+    notes: "Meta-analysis found increased myocardial infarction risk."
 
   # ------------------------------------------------------------- fabrication ----
   # Research-misconduct cases. The claim is false because the data were fabricated or
@@ -289,3 +367,40 @@ entries:
       direction: decreases
     status: still_true
     notes: "Stable basic-science/clinical fact; should be trivially uncontradicted."
+
+  - id: ctrl-measles-vaccine
+    claim_text: "Measles vaccination prevents measles infection."
+    normalized:
+      intervention: "measles vaccination"
+      outcome: "measles infection"
+      population: "susceptible children and adults"
+      direction: prevents
+    status: still_true
+
+  - id: ctrl-antibiotics-pneumonia
+    claim_text: "Antibiotics reduce mortality in bacterial pneumonia."
+    normalized:
+      intervention: "antibiotic therapy"
+      outcome: "mortality"
+      population: "patients with bacterial pneumonia"
+      direction: decreases
+    status: still_true
+
+  - id: ctrl-art-hiv
+    claim_text: "Antiretroviral therapy reduces mortality and disease progression in people with HIV."
+    normalized:
+      intervention: "antiretroviral therapy"
+      outcome: "mortality and disease progression"
+      population: "people living with HIV"
+      direction: decreases
+    status: still_true
+
+  - id: ctrl-insulin-dka
+    claim_text: "Insulin therapy is required to treat diabetic ketoacidosis."
+    normalized:
+      intervention: "insulin therapy"
+      outcome: "resolution of diabetic ketoacidosis"
+      population: "patients with diabetic ketoacidosis"
+      direction: decreases
+    status: still_true
+    notes: "Stable clinical fact; should be trivially uncontradicted."

@@ -14,9 +14,13 @@ candidate's abstract and publication type.
 
 Retrieval is tuned so a known refutation actually comes back:
 
-- Several searches per claim: a broad one (intervention + outcome), one limited to strong study
-  types (meta-analyses, reviews, RCTs, guidelines), and one looking for contradiction (`risk`,
-  `harm`, `no benefit`).
+- Several searches per claim, unioned: a broad one (intervention + outcome), one limited to
+  strong study types (meta-analyses, reviews, RCTs, guidelines), one looking for contradiction
+  (`risk`, `harm`, `no benefit`), a retraction-targeted one (intervention + retracted-publication
+  filter, so link expansion can reach a retraction notice), and a condition-focused one
+  (intervention + population + strong study types, since a descriptive outcome over-narrows while
+  the disease name pins a landmark trial). Boolean words in a term are treated as operators and
+  each term is parenthesised so `A OR B` groups correctly.
 - Two sources queried independently.
 - Optional cache: set `MEDSCREEN_QUERY_CACHE` to a file path (DuckDB) to fetch repeated searches
   once across a corpus. Unset to always search live.
@@ -82,17 +86,29 @@ Each miss is tagged with a root cause (`not_indexed`, `entity_miss`, `retrieved_
 The gold set holds two kinds of `reversed` claim, tagged by `category`. A `reversal` is
 good-faith science superseded by a newer study (found by keyword/high-tier search). A
 `fabrication` is retracted misconduct whose disproving evidence is the retraction notice
-(found via the retraction link) — a distinct retrieval path. Four fabrication cases (Wakefield,
-Macchiarini, Boldt, Obokata) were added, so recall must be re-measured on the expanded slice;
-the numbers below predate them.
+(found via the retraction link) — a distinct path reached by a retraction-targeted query rung.
 
-> Status: real measurement, two known gaps. A real run (`pritamdeka/S-PubMedBert-MS-MARCO`
-> embeddings, Gemini 2.5 Flash Lite stance) on the 10-reversal/8-control gold slice scored 80%
-> retrieval recall and a 25% false-contradiction rate (`reports/recall-20260621-194531.md`).
-> Stance recall is 100% conditional on retrieval, so retrieval is the sole bottleneck. Both misses
-> are `not_indexed` (the 1984 Marshall & Warren ulcer paper and the NICE-SUGAR trial), needing
-> MeSH-based queries or alias expansion. A stronger stance model than Flash Lite would improve the
-> false-contradiction rate.
+> Status: retrieval recall is 90% (18 of 20 reversed) on the expanded gold slice (16 reversals +
+> 4 fabrications + 12 controls), measured model-free via `medscreen-build-cache` +
+> `medscreen-run --use-cache`. Two misses remain. The peptic-ulcer etiology reversal shares only
+> the disease with its refutation ("stress and acid" vs "H. pylori"), so no keyword or MeSH query
+> finds it without already naming the answer (bacteria) — a known limit of keyword retrieval for
+> conceptual reversals. The vertebroplasty reversal's landmark trial is buried among many similar
+> high-tier trials that the condition does not disambiguate. Both are accepted false negatives
+> rather than over-broadening the search and risking control precision; bridging them needs a
+> semantic query-expansion step, deferred on purpose.
+>
+> The condition-focused query rung (intervention + population) added arthroscopy and PCI, whose
+> descriptive outcomes previously over-narrowed the core query. It does not raise LLM cost:
+> stance is capped at the top 20 candidates per claim and every pool already exceeds 20, so the
+> call count is unchanged; the rung only widens retrieval, which is network-bound.
+>
+> Stance and false-contradiction are not yet re-measured on the expanded slice: it needs a real
+> stance model, and the available Gemini key is free-tier (20 requests/day), too little for a full
+> run. The earlier 10/8 slice (`pritamdeka/S-PubMedBert-MS-MARCO` embeddings, Gemini 2.5 Flash
+> Lite) gave 100% conditional stance recall and 25% false-contradiction. The stub backends print
+> placeholder stance numbers only. The precision impact of the condition rung is therefore still
+> unvalidated.
 
 ## 🤔 Doesn't this exist already?
 

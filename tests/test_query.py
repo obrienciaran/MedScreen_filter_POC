@@ -44,6 +44,23 @@ def test_pubmed_queries_have_retraction_targeted_rung():
     )
 
 
+def test_pubmed_queries_have_condition_focused_rung():
+    # A rung pairing the intervention with the population (condition), outcome dropped, under
+    # the high-tier filter, to pin a landmark trial the outcome-based query buries.
+    qs = query.pubmed_queries(_claim())
+    assert any(
+        "hydroxychloroquine" in q and "hospitalized COVID-19 patients" in q
+        and "Meta-Analysis" in q and "mortality" not in q
+        for q in qs
+    )
+
+
+def test_condition_rung_absent_without_population():
+    # With no population there is no condition rung: the only high-tier query keeps the outcome.
+    qs = query.pubmed_queries(NormalizedClaim(intervention="aspirin", outcome="stroke"))
+    assert not any("Meta-Analysis" in q and "stroke" not in q for q in qs)
+
+
 def test_europepmc_queries_nonempty_and_unique():
     qs = query.europepmc_queries(_claim())
     assert qs and all(qs)
