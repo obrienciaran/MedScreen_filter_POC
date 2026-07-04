@@ -9,7 +9,7 @@ research papers (PubMed XML), plus a validation harness that measures one depend
 retrieval recall — on a labeled evaluation set. An LLM is used only for two bounded steps
 (claim extraction and stance labeling); it does not run retrieval or decide the verdict.
 
-## Where things stand (as of commit `79b7893`)
+## Where things stand (as of commit `7e6c6a4`)
 
 - **Retrieval recall: 90% (18/20 positive cases)**, measured model-free (no LLM) via
   `medscreen-build-cache` + `medscreen-run --use-cache`.
@@ -36,21 +36,29 @@ retrieval recall — on a labeled evaluation set. An LLM is used only for two bo
 
 ## Next steps (priority order)
 
-### 1. Claim-extraction evaluation (IN PROGRESS — the largest unmeasured variable)
-The harness feeds hand-authored claims and never runs the extractor, so extraction quality is
-untested. Scaffolded in `eval/extraction/`:
-- `reference_claims.yaml` — 10 gathered papers with parsed title/abstract and an empty
-  `expected_claims` list.
-- **Remaining:** AUTHOR the expected claims by hand (the claims each paper actually asserts,
-  conditions attached), then run the extractor once and score claim precision/recall plus
-  condition retention. The extractor run is the one step here that needs a real LLM — deferred
-  (user does not want real LLM calls yet).
+### 1. Run the claim-extraction eval live (the one remaining LLM step) — START HERE
+Everything is built and offline-validated: `eval/extraction/reference_claims.yaml` holds 24
+reference claims (authored by a strong model — see the not-human-verified caveat there and in
+`eval/README.md`), and `eval/extraction/score.py` runs the extractor and scores it (claim
+precision/recall/F1 + condition retention), unit-tested. Remaining: run the extractor live and
+commit the result.
+- Run (uses the FREE-tier `GEMINI_API_KEY` — ~10 calls, fits its 20/day daily quota; do NOT use
+  the paid key, which was a one-time run):
+  ```bash
+  MEDSCREEN_EXTRACT_BACKEND=llm MEDSCREEN_LLM_PROVIDER=gemini MEDSCREEN_LLM_MODEL=gemini-2.5-flash-lite \
+    python eval/extraction/score.py --out eval/extraction/results.md
+  ```
+- Then commit `eval/extraction/results.md`. It measures strong-model-reference vs Gemini 2.5
+  Flash Lite agreement, not human ground truth.
 
 ### 2. Faithful precision re-measure (can happen soon)
 Precision was measured once but with stub ranking. A faithful re-run wants
 `sentence-transformers` installed (`embed` extra) plus a real stance backend.
 
 ## Done since the last handoff
+- **Claim-extraction eval built**: 24 reference claims authored (strong model),
+  `eval/extraction/score.py` scoring script (unit-tested), offline-validated. Only the live
+  extractor run + committing `results.md` remain (see step 1).
 - **Condition-rung precision VALIDATED** (single real Gemini 2.5 Flash Lite run): 85% stance
   recall, 25% soft false-contradiction, **0/12 false drops**. No precision penalty; rung kept.
 - **Drop case study added** (`data/retracted_drop_live/` -> `reports/retracted_drop_case_study.*`),
