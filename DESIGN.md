@@ -101,7 +101,7 @@ good-faith science superseded by a newer study (found by keyword/high-tier searc
 `fabrication` is retracted misconduct whose disproving evidence is the retraction notice
 (found via the retraction link) — a distinct path reached by a retraction-targeted query rung.
 
-> Status: retrieval recall is 90% (18 of 20 reversed) on the expanded gold slice (16 reversals +
+> Status: retrieval recall is 90% (18 of 20 reversed) on the gold slice (16 reversals +
 > 4 fabrications + 12 controls), measured model-free via `medscreen-build-cache` +
 > `medscreen-run --use-cache`. Two misses remain. The peptic-ulcer etiology reversal shares only
 > the disease with its refutation ("stress and acid" vs "H. pylori"), so no keyword or MeSH query
@@ -116,12 +116,17 @@ good-faith science superseded by a newer study (found by keyword/high-tier searc
 > stance is capped at the top 20 candidates per claim and every pool already exceeds 20, so the
 > call count is unchanged; the rung only widens retrieval, which is network-bound.
 >
-> Stance and false-contradiction are not yet re-measured on the expanded slice: it needs a real
-> stance model, and the available Gemini key is free-tier (20 requests/day), too little for a full
-> run. The earlier 10/8 slice (`pritamdeka/S-PubMedBert-MS-MARCO` embeddings, Gemini 2.5 Flash
-> Lite) gave 100% conditional stance recall and 25% false-contradiction. The stub backends print
-> placeholder stance numbers only. The precision impact of the condition rung is therefore still
-> unvalidated.
+> Stance and precision were measured once on the gold slice with a real stance model
+> (Gemini 2.5 Flash Lite): 85% overall stance recall (17 of 20 answer keys recognised as
+> refuting; the misses are the two retrieval misses plus one condition-mismatch). The
+> false-contradiction rate (a control with any candidate labelled refuting) is 25% (3 of 12:
+> statins, antihypertensives, insulin-for-DKA) — the same as the earlier baseline, so the
+> condition rung shows no precision penalty. Crucially, none of those three would be dropped:
+> each has more supporting than refuting evidence, so the filter scores them `contested`
+> (downweight), not `refuted`. The false DROP rate on controls is 0 of 12 — the precision-first
+> floors hold. The residual softness is a stance-judge limitation, not a retrieval one. Ranking
+> used the stub (the `embed` extra was not installed), so the number is a rough proxy; a faithful
+> re-run wants sbert ranking.
 
 ## 🤔 Doesn't this exist already?
 
