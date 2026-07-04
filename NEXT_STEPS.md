@@ -9,10 +9,14 @@ research papers (PubMed XML), plus a validation harness that measures one depend
 retrieval recall — on a labeled evaluation set. An LLM is used only for two bounded steps
 (claim extraction and stance labeling); it does not run retrieval or decide the verdict.
 
-## Where things stand (as of commit `8fa04d5`)
+## Where things stand (as of commit `79b7893`)
 
 - **Retrieval recall: 90% (18/20 positive cases)**, measured model-free (no LLM) via
   `medscreen-build-cache` + `medscreen-run --use-cache`.
+- **Precision measured once** (real Gemini 2.5 Flash Lite, stub ranking): 85% stance recall,
+  25% soft false-contradiction, **0/12 false drops** — flagged controls score `contested`
+  (downweight), not `refuted`. See `eval/README.md`.
+- **`eval/` folder** now documents all evaluation (harness metrics, case studies, extraction).
 - **Labeled set: 32 cases** = 20 positives (16 "reversal", 4 "fabrication") + 12 controls, in
   `data/gold/consensus_reversals.yaml`, spread across varied topic domains.
 - **41 tests pass** (`.venv/bin/python -m pytest -q`; 1 live network test deselected by default).
@@ -32,54 +36,33 @@ retrieval recall — on a labeled evaluation set. An LLM is used only for two bo
 
 ## Next steps (priority order)
 
-### 1. Validate the condition-focused query rung's PRECISION (deferred, highest priority)
-The condition rung (`intervention + population + high-tier filter`, in
-`transformation/query.py`) recovered two cases and took recall 80% -> 90%. Its effect on
-**precision** (false-positive rate on the 12 controls) is **UNVALIDATED**.
+### 1. Claim-extraction evaluation (IN PROGRESS — the largest unmeasured variable)
+The harness feeds hand-authored claims and never runs the extractor, so extraction quality is
+untested. Scaffolded in `eval/extraction/`:
+- `reference_claims.yaml` — 10 gathered papers with parsed title/abstract and an empty
+  `expected_claims` list.
+- **Remaining:** AUTHOR the expected claims by hand (the claims each paper actually asserts,
+  conditions attached), then run the extractor once and score claim precision/recall plus
+  condition retention. The extractor run is the one step here that needs a real LLM — deferred
+  (user does not want real LLM calls yet).
 
-- **Blocker:** needs a real stance LLM. The `GEMINI_API_KEY` in the env is **free-tier
-  (20 requests/day)**, already exhausted; a full run needs ~640-660 stance calls. No
-  `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` set. `sentence-transformers` (the `embed` extra) is
-  NOT installed, so ranking falls back to the stub (near-random top-20 to stance) — install it
-  for a faithful precision number.
-- **How to run once real capacity exists** (ASK THE USER FIRST — real LLM calls cost money and
-  the user has said not to make real LLM calls yet):
-  ```bash
-  # retrieval cache (network, no LLM):
-  MEDSCREEN_QUERY_CACHE=1 medscreen-build-cache --db data/cache/harness_measure.duckdb
-  # precision run (real stance + real ranking):
-  MEDSCREEN_LLM_PROVIDER=<provider> MEDSCREEN_STANCE_BACKEND=<provider> \
-    MEDSCREEN_EMBED_BACKEND=sbert \
-    medscreen-run --use-cache --db data/cache/harness_measure.duckdb --out /tmp/precision
-  ```
-  Then read the false-positive (false-contradiction) rate on the 12 controls. Prior baseline on
-  an earlier, smaller control set was 25%.
-- **Decision rule:** if precision holds, keep the rung. If it hurts precision, narrow or revert
-  it — recall falls back to 80%, acceptable under the precision-first philosophy.
-- **Cost note (already established):** the condition rung does NOT raise LLM cost. Stance is
-  capped at the top 20 candidates per claim and every candidate pool already exceeds 20, so the
-  call count is unchanged; the rung only widens retrieval (network-bound). KEEP the top-20 cap —
-  it bounds eventual LLM spend at corpus scale.
+### 2. Faithful precision re-measure (can happen soon)
+Precision was measured once but with stub ranking. A faithful re-run wants
+`sentence-transformers` installed (`embed` extra) plus a real stance backend.
 
-### 2. Measure claim EXTRACTION (identified gap, not started)
-Extraction (the LLM step that turns a paper into checkable claims) is unmeasured: the harness
-feeds hand-authored normalized claims and bypasses the extractor. Build a small paper->claims
-labeled set (~20-50 papers; a human writes the reference claims, optionally bootstrapped by a
-model draft then curated), run the extractor once, cache, and score precision/recall plus
-condition retention. This is the largest unmeasured variable in the pipeline.
+## Done since the last handoff
+- **Condition-rung precision VALIDATED** (single real Gemini 2.5 Flash Lite run): 85% stance
+  recall, 25% soft false-contradiction, **0/12 false drops**. No precision penalty; rung kept.
+- **Drop case study added** (`data/retracted_drop_live/` -> `reports/retracted_drop_case_study.*`),
+  alongside the existing `ungrounded` case study (`data/bixonimania_live/`).
+- **`eval/` folder created**, documenting harness metrics, case studies, and the extraction eval.
 
-### 3. Case-study inputs for verdict types not covered by the harness
-The harness labeled set covers the positive and control cases. The filter's runtime verdicts
-`contested`, `ungrounded`, and `supported` are shown via case-study XML inputs. One already
-exists at `data/bixonimania_live/99000001.xml` (a fabricated-topic paper that lands in
-`ungrounded -> review`; report in `reports/bixonimania_case_study.{csv,html}`). Could add a
-retracted-source XML (`drop` via the fast path); `contested`/`supported` need a live run.
-
-### 4. (Later) Semantic query expansion for the two hard misses
-On the roadmap. LLM-driven query/topic expansion to match on meaning rather than surface
-wording. Low priority given the precision-first stance.
-
-### 5. (Optional) Grow the labeled set further for statistical stability.
+## Not doing (decided)
+- Growing the gold set — it is a POC; current size (32) is fine.
+- Chasing the two retrieval misses (conceptual reversal + buried landmark) — accepted as a
+  limitation. Deterministic search can't reach them without over-fitting to the answer, and an
+  LLM would be over-engineering. Precision-first: some false negatives are fine.
+- `contested` / `supported` case studies — they need a real run; deferred.
 
 ## Established decisions & philosophy (respect these)
 - **Evidence-based factuality filter, full stop.** It judges whether a paper's claims are

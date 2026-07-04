@@ -1,0 +1,172 @@
+# Claim-extraction evaluation set.
+#
+# Purpose: the validation harness feeds hand-authored claims and BYPASSES the LLM claim
+# extractor, so extraction quality is never measured. This set measures it directly.
+#
+# Each entry pins one paper (copied into papers/) with its parsed title and abstract. Fill in
+# expected_claims by hand: the checkable claims the paper actually asserts, each with its
+# conditions attached (population, comparator, dose, setting) — condition-stripped claims are
+# the dominant source of false verdicts. Keep them faithful to the paper, not exhaustive.
+#
+# Scoring (run later, needs a real LLM extractor): run the extractor on each paper, then compare
+# its output to expected_claims on (a) claim precision/recall (did it find the real claims
+# without inventing any) and (b) condition retention (did it keep population/comparator/dose).
+#
+# STATUS: papers gathered; expected_claims to be authored; the extractor run is deferred (it is
+# the one step here that needs a real LLM call).
+
+papers:
+- pmid: '38177157'
+  xml: papers/38177157.xml
+  title: Pulmonary hypertension.
+  abstract: 'Pulmonary hypertension encompasses a range of conditions directly or indirectly leading to
+    elevated pressures within the pulmonary arteries. Five main groups of pulmonary hypertension are recognized,
+    all defined by a mean pulmonary artery pressure of >20 mmHg: pulmonary arterial hypertension (rare),
+    pulmonary hypertension associated with left-sided heart disease (very common), pulmonary hypertension
+    associated with lung disease (common), pulmonary hypertension associated with pulmonary artery obstructions,
+    usually related to thromboembolic disease (rare), and pulmonary hypertension with unclear and/or multifactorial
+    mechanisms (rare). At least 1% of the world''s population is affected, with a greater burden more
+    likely in low-income and middle-income countries. Across all its forms, pulmonary hypertension is
+    associated with adverse vascular remodelling with obstruction, stiffening and vasoconstriction of
+    the pulmonary vasculature. Without proactive management this leads to hypertrophy and ultimately failure
+    of the right ventricle, the main cause of death. In older individuals, dyspnoea is the most common
+    symptom. Stepwise investigation precedes definitive diagnosis with right heart catheterization. Medical
+    and surgical treatments are approved for pulmonary arterial hypertension and chronic thromboembolic
+    pulmonary hypertension. There are emerging treatments for other forms of pulmonary hypertension; but
+    current therapy primarily targets the underlying cause. There are still major gaps in basic, clinical
+    and translational knowledge; thus, further research, with a focus on vulnerable populations, is needed
+    to better characterize, detect and effectively treat all forms of pulmonary hypertension.'
+  expected_claims: []
+- pmid: '38469546'
+  xml: papers/38469546.xml
+  title: 'Rheumatoid arthritis: pathogenesis and therapeutic advances.'
+  abstract: Rheumatoid arthritis (RA) is a chronic autoimmune disease characterized by the unresolved
+    synovial inflammation for tissues-destructive consequence, which remains one of significant causes
+    of disability and labor loss, affecting about 0.2-1% global population. Although treatments with disease-modifying
+    antirheumatic drugs (DMARDs) are effective to control inflammation and decrease bone destruction,
+    the overall remission rates of RA still stay at a low level. Therefore, uncovering the pathogenesis
+    of RA and expediting clinical transformation are imminently in need. Here, we summarize the immunological
+    basis, inflammatory pathways, genetic and epigenetic alterations, and metabolic disorders in RA, with
+    highlights on the abnormality of immune cells atlas, epigenetics, and immunometabolism. Besides an
+    overview of first-line medications including conventional DMARDs, biologics, and small molecule agents,
+    we discuss in depth promising targeted therapies under clinical or preclinical trials, especially
+    epigenetic and metabolic regulators. Additionally, prospects on precision medicine based on synovial
+    biopsy or RNA-sequencing and cell therapies of mesenchymal stem cells or chimeric antigen receptor
+    T-cell are also looked forward. The advancements of pathogenesis and innovations of therapies in RA
+    accelerates the progress of RA treatments.
+  expected_claims: []
+- pmid: '38733347'
+  xml: papers/38733347.xml
+  title: 'Alzheimer''s disease: insights into pathology, molecular mechanisms, and therapy.'
+  abstract: Alzheimer's disease (AD), the leading cause of dementia, is characterized by the accumulation
+    of amyloid plaques and neurofibrillary tangles in the brain. This condition casts a significant shadow
+    on global health due to its complex and multifactorial nature. In addition to genetic predispositions,
+    the development of AD is influenced by a myriad of risk factors, including aging, systemic inflammation,
+    chronic health conditions, lifestyle, and environmental exposures. Recent advancements in understanding
+    the complex pathophysiology of AD are paving the way for enhanced diagnostic techniques, improved
+    risk assessment, and potentially effective prevention strategies. These discoveries are crucial in
+    the quest to unravel the complexities of AD, offering a beacon of hope for improved management and
+    treatment options for the millions affected by this debilitating disease.
+  expected_claims: []
+- pmid: '38777539'
+  xml: papers/38777539.xml
+  title: 'Hereditary Breast Cancer: BRCA Mutations and Beyond.'
+  abstract: Hereditary breast cancers are manifested by pathogenic and likely pathogenic genetic mutations.
+    Penetrance expresses the breast cancer risk associated with these genetic mutations. Although BRCA1/2
+    are the most widely known genetic mutations associated with breast cancer, numerous additional genes
+    demonstrate high and moderate penetrance for breast cancer. This review describes current genetic
+    testing, details the specific high and moderate penetrance genes for breast cancer and reviews the
+    current approach to screening for breast cancer in patients with these genetic mutations.
+  expected_claims: []
+- pmid: '38928291'
+  xml: papers/38928291.xml
+  title: Kidney Aging and Chronic Kidney Disease.
+  abstract: The process of aging inevitably leads to an increase in age-related comorbidities, including
+    chronic kidney disease (CKD). In many aspects, CKD can be considered a state of accelerated and premature
+    aging. Aging kidney and CKD have numerous common characteristic features, ranging from pathological
+    presentation and clinical manifestation to underlying mechanisms. The shared mechanisms underlying
+    the process of kidney aging and the development of CKD include the increase in cellular senescence,
+    the decrease in autophagy, mitochondrial dysfunction, and the alterations of epigenetic regulation,
+    suggesting the existence of potential therapeutic targets that are applicable to both conditions.
+    In this review, we provide a comprehensive overview of the common characteristics between aging kidney
+    and CKD, encompassing morphological changes, functional alterations, and recent advancements in understanding
+    the underlying mechanisms. Moreover, we discuss potential therapeutic strategies for targeting senescent
+    cells in both the aging process and CKD.
+  expected_claims: []
+- pmid: '39051318'
+  xml: papers/39051318.xml
+  title: 'Global Initiative for Asthma Guidelines 2024: An Update.'
+  abstract: Asthma poses significant challenges in pediatric care, particularly in resource-limited settings.
+    The Global Initiative for Asthma (GINA) 2024 guidelines represents a crucial step forward in addressing
+    these challenges. This review critically evaluates the guidelines, focusing on their implementation
+    and impact in developing countries like India. There have been certain key updates including a revised
+    diagnostic flow chart and emphasis on alternative tools like peak flow meters. Challenges related
+    to bronchodilator reversibility and interpreting FEV1/FVC are also explored. The article further addresses
+    the implications of bronchial provocation testing in pediatric asthma. Detailed insights into cough-variant
+    asthma highlight its rising recognition and management strategies. The GINA 2024 guidelines reflect
+    updated criteria for commencing a particular step of therapy, aiming to optimize management and outcomes
+    in pediatric asthma care. The guidelines have updated the role of allergen immunotherapy in pediatric
+    asthma based on emerging evidence of efficacy and safety. Overall, the GINA 2024 guidelines offer
+    a realistic approach to pediatric asthma care, with a potential for broader applications pending further
+    research and adaptation.
+  expected_claims: []
+- pmid: '39084811'
+  xml: papers/39084811.xml
+  title: 'Diagnosis and Treatment of Hyperglycemia in Pregnancy: Type 2 Diabetes Mellitus and Gestational
+    Diabetes.'
+  abstract: Hyperglycemia in pregnancy due to pre-existing Type 2 diabetes mellitus (T2DM) and gestational
+    diabetes mellitus (GDM) is rising globally with increasing rates of risk factors for metabolic disease.
+    This review summarizes current evidence and recommendations from national and international guidelines
+    for diagnosis and management of T2DM and GDM to optimize maternal and neonatal outcomes.
+  expected_claims: []
+- pmid: '39185405'
+  xml: papers/39185405.xml
+  title: Inflammation mechanism and research progress of COPD.
+  abstract: Chronic obstructive pulmonary disease (COPD) is a common respiratory disease characterized
+    by irreversible progressive airflow limitation, often manifested by persistent cough, sputum production
+    and other respiratory symptoms that pose a serious threat to human health and affect the quality of
+    life of patients. The disease is associated with chronic inflammation, which is associated with the
+    onset and progression of COPD, but anti-inflammatory therapy is not first-line treatment. Inflammation
+    has multiple manifestations and phenotypes, and this heterogeneity reveals different patterns of inflammation,
+    making treatment difficult. This paper aims to explore the direction of more effective anti-inflammatory
+    treatment by analyzing the nature of inflammation and the molecular mechanism of disease occurrence
+    and development in COPD patients, and to provide new ideas for the treatment of COPD patients.
+  expected_claims: []
+- pmid: '39496213'
+  xml: papers/39496213.xml
+  title: Contemporary Management of Acute Ischemic Stroke.
+  abstract: In the past decade, adding mechanical thrombectomy (MT) of intracranial arterial occlusions
+    to intravenous (IV) thrombolysis has revolutionized the treatment of acute ischemic stroke (AIS) by
+    expanding the therapeutic window to 24 h. Treatment decisions require establishing a high probability
+    of AIS; confirming time since last known well (LKW); assessing severity of the neurological deficit;
+    determining any contraindications to IV thrombolysis; and performing neuroimaging, usually noncontrast
+    computed tomography (NCCT), to exclude intracerebral hemorrhage. If time since LKW is less than 4.5 h,
+    patients with disabling stroke without contraindications can proceed immediately to IV thrombolysis
+    while the decision about MT is under way. For some patients, the MT decision can be made on the basis
+    of clinical assessment, NCCT, and CT angiography showing a large vessel occlusion. Others may require
+    additional neuroimaging. Patients who are not candidates for IV thrombolysis within 4.5 h or MT should
+    be immediately evaluated for eligibility for extended-window IV thrombolysis or early antiplatelet
+    treatment.
+  expected_claims: []
+- pmid: '39501335'
+  xml: papers/39501335.xml
+  title: 'From inflammation to depression: key biomarkers for IBD-related major depressive disorder.'
+  abstract: Inflammatory bowel disease (IBD) is a chronic, inflammatory, and autoimmune disorder, and
+    its incidence of comorbid with major depressive disorder (MDD) is significantly higher than the general
+    population. However, many patients lack proper recognition and necessary psychological health treatments.
+    We aimed to identify potential biomarkers and mechanisms involved in the development of IBD comorbid
+    with MDD (IBD-MDD). We utilized IBD and MDD-related datasets from the GEO database for differential
+    gene expression analysis, protein-protein interaction (PPI) and pathway enrichment analysis, random
+    forest algorithm, LASSO regression analysis, and construction of a disease prediction model. We assessed
+    the accuracy of the model using ROC curve, explored potential mechanisms through immune infiltration
+    analysis, and validated candidate biomarkers using peripheral blood samples from patients in our center's
+    cohort. We identified 484 IBD-related secreted proteins and 142 key module genes associated with MDD.
+    PPI analysis revealed two crucial modules primarily involved in inflammation and immune regulation.
+    We identified four diagnostic genes (HGF, SPARC, ADAM12, and MMP8) from the 21 shared genes between
+    IBD-related secreted proteins and MDD key module genes, constructed a nomogram model and confirmed
+    its accuracy using ROC curve from an external independent dataset. Immune infiltration analysis revealed
+    significant associations between the four diagnostic genes, and cellular immune dysregulation in MDD.
+    Finally, we validated the expression patterns of the four diagnostic genes in our cohort. Our study
+    discovered four candidate biomarkers for IBD-MDD, providing new insights for the diagnosis and therapeutic
+    intervention of serum-based IBD comorbid with MDD.
+  expected_claims: []

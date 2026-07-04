@@ -106,21 +106,14 @@ types, and MeSH terms the filter relies on. The ingester reads any PubMed XML it
 ## 🏃 Run the validation
 
 ```bash
-medscreen-build-cache      # fetch candidate evidence for the gold set into DuckDB
+medscreen-build-cache      # fetch candidate evidence for the gold set into DuckDB (no LLM)
 medscreen-run --use-cache  # score against the cache, write report to ./reports/
 medscreen-graph            # render the evidence graph to reports/graph.html
 pytest                   # unit tests (network tests are opt-in: pytest -m live)
 ```
 
-`medscreen-run` defaults to stub backends (offline, no key). For a real measurement:
-
-```bash
-MEDSCREEN_EMBED_BACKEND=sbert MEDSCREEN_STANCE_BACKEND=llm MEDSCREEN_LLM_PROVIDER=gemini \
-  medscreen-run --use-cache
-```
-
-`MEDSCREEN_EMBED_BACKEND=sbert` needs the `embed` extra; without it the numbers come from stubs and
-are not a real measurement.
+`medscreen-run` defaults to stub backends (offline, no key). What each metric means, which need a
+real LLM backend, and the latest results are documented in [`eval/README.md`](eval/README.md).
 
 ## 🌀 Visualization (optional)
 

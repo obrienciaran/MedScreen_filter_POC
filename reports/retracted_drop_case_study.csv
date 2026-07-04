@@ -1,0 +1,2 @@
+pmid,title,verdict,score,action,verdict_basis,refutation_timing,grounded,n_claims,n_refuted_claims,top_refuting_tier,refuting_confidence,claim_scores,refuting_pmids,notes
+32214244,Microbiome analyses of blood and tissues suggest cancer diagnostic approach.,refuted,0.000,drop,retraction,subsequent,false,0,0,0.95,0.00,,38926587,formally retracted (RetractionIn link in the paper's XML)

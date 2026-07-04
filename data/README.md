@@ -1,7 +1,10 @@
 # Data folders
 
 Two folders hold example PubMed papers you can run the filter on. They show the
-filter working in two opposite ways.
+filter working in two opposite ways. Two more hold single-paper case studies (see
+`eval/README.md`): `bixonimania_live` (a fabricated, non-existent condition that the
+filter leaves `ungrounded`) and `retracted_drop_live` (a formally retracted paper the
+filter `drop`s via the retraction fast path).
 
 ## trial
 
