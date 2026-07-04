@@ -17,7 +17,7 @@ misinformation imitates best. This filter checks each claim against retrieved ev
 Running the filter writes `reports/filter.csv`, one row per paper. The filter can also draw an
 optional evidence graph over the same data (`reports/filter.html`), but the table is the product.
 
-<img width="1199" height="279" alt="Filter output table" src="https://github.com/user-attachments/assets/8ec9ed89-82d9-4dc7-a768-a57945c77b06" />
+<img width="958" height="188" alt="Screenshot 2026-07-04 at 13 32 18" src="https://github.com/user-attachments/assets/4a4dd1cd-fa0b-4826-91e1-5506942d7f44" />
 
 The columns in the screenshot:
 
