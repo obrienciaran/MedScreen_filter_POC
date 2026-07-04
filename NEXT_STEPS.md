@@ -16,6 +16,9 @@ extraction and stance labeling); it does not run retrieval or decide the verdict
 - **Precision measured once** (real Gemini 2.5 Flash Lite, stub ranking): 85% stance recall,
   25% soft false-contradiction, **0/12 false drops** — flagged controls score `contested`
   (downweight), not `refuted`. See `eval/README.md`.
+- **Extraction eval done** (Gemini 2.5 Flash Lite vs strong-model reference,
+  `eval/extraction/results.md`): 83% claim recall, 43% precision (it extracts more, finer-grained
+  claims than the reference), condition retention 93-100% (it keeps conditions, not strips them).
 - **`eval/` folder** now documents all evaluation (harness metrics, case studies, extraction).
 - **Labeled set: 32 cases** = 20 positives (16 "reversal", 4 "fabrication") + 12 controls, in
   `data/gold/consensus_reversals.yaml`, spread across varied topic domains.
@@ -29,24 +32,12 @@ extraction and stance labeling); it does not run retrieval or decide the verdict
 
 ## Next steps (priority order)
 
-### 1. Run the claim-extraction eval live (the one remaining LLM step) — START HERE
-Everything is built and offline-validated: `eval/extraction/reference_claims.yaml` holds 24
-reference claims (authored by a strong model — see the not-human-verified caveat there and in
-`eval/README.md`), and `eval/extraction/score.py` runs the extractor and scores it (claim
-precision/recall/F1 + condition retention), unit-tested. Remaining: run the extractor live and
-commit the result.
-- Run (uses the FREE-tier `GEMINI_API_KEY` — ~10 calls, fits its 20/day daily quota; do NOT use
-  the paid key, which was a one-time run):
-  ```bash
-  MEDSCREEN_EXTRACT_BACKEND=llm MEDSCREEN_LLM_PROVIDER=gemini MEDSCREEN_LLM_MODEL=gemini-2.5-flash-lite \
-    python eval/extraction/score.py --out eval/extraction/results.md
-  ```
-- Then commit `eval/extraction/results.md`. It measures strong-model-reference vs Gemini 2.5
-  Flash Lite agreement, not human ground truth.
-
-### 2. Faithful precision re-measure (can happen soon)
-Precision was measured once but with stub ranking. A faithful re-run wants
-`sentence-transformers` installed (`embed` extra) plus a real stance backend.
+### 1. Faithful precision re-measure (deferred — the main open item)
+The stance/precision numbers above used stub ranking, so they are a rough proxy. A faithful
+re-run wants `sentence-transformers` installed (the `embed` extra) plus a real stance backend,
+then `medscreen-build-cache` followed by `medscreen-run --use-cache` with those set. The
+extraction eval can be re-run the same way via `eval/extraction/score.py` with
+`MEDSCREEN_EXTRACT_BACKEND=llm` and a provider.
 
 ## Not doing (decided)
 - Growing the gold set — it is a POC; current size (32) is fine.
