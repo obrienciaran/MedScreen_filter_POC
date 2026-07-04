@@ -5,9 +5,9 @@ Handoff for a fresh Claude session. Read `CLAUDE.md` (scope + rules) and `DESIGN
 open engineering work and the context that is not obvious from the code.
 
 This is a data-quality filter: a retrieval + claim-verification pipeline over a corpus of
-research papers (PubMed XML), plus a validation harness that measures one dependency —
-retrieval recall — on a labeled evaluation set. An LLM is used only for two bounded steps
-(claim extraction and stance labeling); it does not run retrieval or decide the verdict.
+source documents (XML), plus a validation harness that measures one dependency — retrieval
+recall — on a labeled evaluation set. An LLM is used only for two bounded steps (claim
+extraction and stance labeling); it does not run retrieval or decide the verdict.
 
 ## Where things stand (as of commit `ab4b919`)
 
@@ -78,8 +78,8 @@ Precision was measured once but with stub ranking. A faithful re-run wants
   exists but was a deliberate one-time run — do not reuse it.
 - `sentence-transformers` NOT installed -> sbert ranking unavailable (stub fallback = random
   ranking). Install the `embed` extra for real ranking.
-- Bash outbound network is sometimes gated/denied; `WebFetch` worked for the PubMed E-utilities
-  (esummary/efetch) during source-ID verification.
+- Bash outbound network is sometimes gated/denied; `WebFetch` worked for the source document API
+  when direct calls were blocked (e.g. verifying source IDs).
 - Retrieval measurement is LLM-free and safe to run: `medscreen-build-cache` (network) then
   `medscreen-run --use-cache` (offline, stub stance — retrieval recall is stance-independent).
 - Throwaway measurement DBs (`data/cache/*.duckdb`) are gitignored; delete them after use.
@@ -89,7 +89,7 @@ Precision was measured once but with stub ranking. A faithful re-run wants
 - NEVER run anything that uses a real LLM API without asking (the user explicitly does not want
   real LLM calls right now).
 - NEVER alter the labeled data (`consensus_reversals.yaml`) without asking — it is the most
-  accuracy-critical artifact; every source ID must be verified against PubMed before adding.
+  accuracy-critical artifact; every source ID must be verified against the source API before adding.
 - NO `Co-Authored-By` trailer in git commits (user preference; see memory
   `no-coauthor-trailer`).
 - Keep the README high-level: query-rung internals, recall/precision numbers, and
