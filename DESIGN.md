@@ -116,17 +116,20 @@ good-faith science superseded by a newer study (found by keyword/high-tier searc
 > stance is capped at the top 20 candidates per claim and every pool already exceeds 20, so the
 > call count is unchanged; the rung only widens retrieval, which is network-bound.
 >
-> Stance and precision were measured once on the gold slice with a real stance model
+> Stance and precision, measured on the gold slice with sbert ranking and a real stance model
 > (Gemini 2.5 Flash Lite): 85% overall stance recall (17 of 20 answer keys recognised as
 > refuting; the misses are the two retrieval misses plus one condition-mismatch). The
-> false-contradiction rate (a control with any candidate labelled refuting) is 25% (3 of 12:
-> statins, antihypertensives, insulin-for-DKA) — the same as the earlier baseline, so the
-> condition rung shows no precision penalty. Crucially, none of those three would be dropped:
-> each has more supporting than refuting evidence, so the filter scores them `contested`
-> (downweight), not `refuted`. The false DROP rate on controls is 0 of 12 — the precision-first
-> floors hold. The residual softness is a stance-judge limitation, not a retrieval one. Ranking
-> used the stub (the `embed` extra was not installed), so the number is a rough proxy; a faithful
-> re-run wants sbert ranking.
+> false-contradiction rate (a control with any candidate labelled refuting) is 25% (3 of 12).
+> Crucially, none of those three would be dropped: each has more supporting than refuting
+> evidence, so the filter scores them `contested` (downweight), not `refuted`. The false DROP
+> rate on controls is 0 of 12 — the precision-first floors hold. The residual softness is a
+> stance-judge limitation, not a retrieval one. An earlier stub-ranked run gave the same 85% /
+> 25% / 0-drops, so ranking quality did not move the headline numbers.
+>
+> Claim extraction (Gemini 2.5 Flash Lite) was measured against a strong-model reference: 83%
+> claim recall and strong condition retention (93-100% for population/comparator/direction), so
+> the extractor keeps conditions rather than stripping them; precision is lower because it
+> extracts more, finer-grained claims than the reference (`eval/README.md`).
 
 ## 🤔 Doesn't this exist already?
 

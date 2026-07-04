@@ -50,12 +50,15 @@ MEDSCREEN_EMBED_BACKEND=sbert MEDSCREEN_STANCE_BACKEND=<provider> MEDSCREEN_LLM_
 ### Latest results (gold slice: 16 reversals + 4 fabrications + 12 controls)
 
 - **Retrieval recall: 90% (18/20)** — model-free, exact.
-- **Stance recall (overall): 85%** — Gemini 2.5 Flash Lite, single run 2026-07-04.
+- **Stance recall (overall): 85%** — sbert ranking + Gemini 2.5 Flash Lite stance.
 - **False-contradiction: 25% (3/12 controls)** — but **0/12 false drops**: the flagged controls
   have more supporting than refuting evidence, so the filter scores them `contested` (downweight),
-  not `refuted`. The precision-first drop floors hold.
-- **Caveat:** that real run used stub ranking (`sentence-transformers` not installed), so the
-  stance/precision figures are a rough proxy; retrieval recall is exact.
+  not `refuted`. The precision-first drop floors hold. An earlier stub-ranked run gave the same
+  numbers, so ranking quality did not move them.
+- **Extraction (Gemini 2.5 Flash Lite vs strong-model reference):** 83% claim recall, 43%
+  precision (it extracts more, finer-grained claims), condition retention 93-100%
+  (population/comparator/direction) — it keeps conditions rather than stripping them.
+  See `eval/extraction/results.md`.
 - Two retrieval misses, **accepted as a limitation**: a conceptual etiology reversal (claim and
   refutation share only the topic) and a landmark buried among similar high-tier trials.
   Deterministic search cannot reach them without over-fitting to the answer, and an LLM here
