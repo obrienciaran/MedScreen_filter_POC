@@ -65,6 +65,19 @@ evidence predates the paper (it ignored already-published evidence) or postdates
 reversal pattern). Timing is a time ordering only; it does not assert the paper was ever
 accepted consensus. Both are written to the flat CSV alongside the continuous per-claim scores.
 
+### Why `n_refuted_claims` can be `0` while `top_refuting_tier` and `refuting_pmids` have values
+
+Expected, not a bug. Each claim is checked against several retrieved studies; some may refute it,
+others support it. A claim is `refuted` only when studies refute it, none support it, and the
+strongest refutation is unambiguous (tier × confidence ≥ 0.6, refuting tier ≥ 0.8, confidence
+≥ 0.7). A claim with studies on both sides, or with only a weak lone refutation, is `contested`.
+
+`refuting_pmids` and `top_refuting_tier` collect every study that refuted any claim, regardless of
+how that claim was finally scored, so a `contested` claim still contributes its refuting studies
+to those columns. `n_refuted_claims` counts only claims whose final verdict is `refuted`. So a
+paper whose claims are all `supported` or `contested` shows `n_refuted_claims = 0` while
+`refuting_pmids` is non-empty.
+
 ## ❓ Validation study: can the search find the evidence?
 
 The filter is only as good as its search. A separate test (`medscreen-run`) checks that one step

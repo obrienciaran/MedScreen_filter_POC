@@ -1,11 +1,11 @@
-pmid,title,verdict,score,action,n_claims,n_refuted_claims,top_refuting_tier,refuting_pmids,notes
-38177157,Pulmonary hypertension.,supported,0.500,keep,5,0,0.00,,
-38469546,Rheumatoid arthritis: pathogenesis and therapeutic advances.,contested,0.148,downweight,5,0,0.80,22584017;29600949;37591216;38003865;39436446;39757285,
-38733347,"Alzheimer's disease: insights into pathology, molecular mechanisms, and therapy.",supported,0.660,keep,5,0,0.00,,
-38777539,Hereditary Breast Cancer: BRCA Mutations and Beyond.,contested,0.552,downweight,4,0,0.40,29368626;29566657,
-38928291,Kidney Aging and Chronic Kidney Disease.,contested,0.372,downweight,5,0,0.40,24824884;32921320,
-39051318,Global Initiative for Asthma Guidelines 2024: An Update.,supported,0.660,keep,5,0,0.00,,
-39084811,Diagnosis and Treatment of Hyperglycemia in Pregnancy: Type 2 Diabetes Mellitus and Gestational Diabetes.,supported,0.660,keep,3,0,0.00,,
-39185405,Inflammation mechanism and research progress of COPD.,supported,0.500,keep,4,0,0.00,,
-39496213,Contemporary Management of Acute Ischemic Stroke.,contested,0.148,downweight,5,0,0.80,34035152;41614492;41625980,
-39501335,From inflammation to depression: key biomarkers for IBD-related major depressive disorder.,supported,0.644,keep,5,0,0.00,,
+pmid,title,verdict,score,action,verdict_basis,refutation_timing,grounded,n_claims,n_refuted_claims,top_refuting_tier,refuting_confidence,claim_scores,refuting_pmids,notes
+32205204,RETRACTED: Hydroxychloroquine and azithromycin as a treatment of COVID-19: results of an open-label non-randomized clinical trial.,refuted,0.000,drop,retraction,subsequent,false,0,0,0.95,0.00,,39730229,formally retracted (RetractionIn link in the paper's XML)
+32214244,Microbiome analyses of blood and tissues suggest cancer diagnostic approach.,refuted,0.000,drop,retraction,subsequent,false,0,0,0.95,0.00,,38926587,formally retracted (RetractionIn link in the paper's XML)
+32828135,RETRACTED: Hydroxychloroquine in the Treatment of COVID-19: A Multicenter Randomized Controlled Study.,refuted,0.000,drop,retraction,subsequent,false,0,0,0.95,0.00,,36099166,formally retracted (RetractionIn link in the paper's XML)
+33305711,"Relationship between Hyperlipidemia, Cardiovascular Disease and Stroke: A Systematic Review.",ungrounded,0.500,review,evidence,unknown,false,1,0,0.00,0.00,33305711#c0=0.500,,
+33723507,Use of ivermectin in the treatment of Covid-19: A pilot trial.,refuted,0.000,drop,retraction,subsequent,false,0,0,0.95,0.00,,35528725,formally retracted (RetractionIn link in the paper's XML)
+34170647,Tirzepatide versus Semaglutide Once Weekly in Patients with Type 2 Diabetes.,unverified,0.500,keep,evidence,unknown,false,1,0,0.00,0.00,34170647#c0=0.500,,
+34261627,"Associations between statins and adverse events in primary prevention of cardiovascular disease: systematic review with pairwise, network, and dose-response meta-analyses.",unverified,0.500,keep,evidence,unknown,false,1,0,0.00,0.00,34261627#c0=0.500,,
+35672760,Stress-induced epinephrine promotes epithelial-to-mesenchymal transition and stemness of CRC through the CEBPB/TRIM2/P53 axis.,refuted,0.000,drop,retraction,subsequent,false,0,0,0.95,0.00,,42046070,formally retracted (RetractionIn link in the paper's XML)
+38033089,2023 ACC/AHA/ACCP/HRS Guideline for the Diagnosis and Management of Atrial Fibrillation: A Report of the American College of Cardiology/American Heart Association Joint Committee on Clinical Practice Guidelines.,unverified,0.500,keep,evidence,unknown,false,1,0,0.00,0.00,38033089#c0=0.500,,
+9500320,"Ileal-lymphoid-nodular hyperplasia, non-specific colitis, and pervasive developmental disorder in children.",refuted,0.000,drop,retraction,subsequent,false,0,0,0.95,0.00,,15016483;20137807,formally retracted (RetractionIn link in the paper's XML)

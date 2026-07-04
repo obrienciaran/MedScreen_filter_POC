@@ -14,15 +14,8 @@ misinformation imitates best. This filter checks each claim against retrieved ev
 
 ## ➡️ What it produces
 
-Running the filter writes `reports/filter.csv`, one row per paper:
-
-| paper | truthful | ... |
-|---|---|---|
-| paper identifier | do its claims hold up against the evidence | confidence, contradicting studies, evidence tier, other metadata |
-
-Every column is documented in [`reports/README.md`](reports/README.md). The filter can also draw
-an optional evidence graph over the same data (`reports/filter.html`), but the table is the
-product.
+Running the filter writes `reports/filter.csv`, one row per paper. The filter can also draw an
+optional evidence graph over the same data (`reports/filter.html`), but the table is the product.
 
 <img width="1199" height="279" alt="Filter output table" src="https://github.com/user-attachments/assets/8ec9ed89-82d9-4dc7-a768-a57945c77b06" />
 
@@ -32,31 +25,19 @@ The columns in the screenshot:
 |---|---|
 | `pmid` | PubMed identifier of the paper. |
 | `title` | Article title. |
-| `verdict` | Truthfulness verdict: `supported`, `contested`, `refuted`, or `unverified`. |
+| `verdict` | Truthfulness verdict: `supported`, `contested`, `refuted`, `unverified`, or `ungrounded`. |
 | `score` | Truthfulness score, `0.000` (refuted) to `1.000` (well supported). |
-| `action` | Recommended training action: `keep`, `downweight`, or `drop`. |
+| `action` | Recommended training action: `keep`, `downweight`, `drop`, or `review`. |
+| `verdict_basis` | What the verdict rests on: `retraction` (a formal retraction link in the paper's own record), `evidence` (retrieved literature), or `none`. |
+| `refutation_timing` | Whether the refuting evidence came `prior` to the paper, `subsequent` to it (the reversal pattern), or `unknown`. |
+| `grounded` | `true` if any supporting evidence was found for the paper's claims, else `false`. |
 | `n_claims` | How many claims were extracted from the paper. |
-| `n_refuted_claims` | How many claims were decisively refuted (verdict `refuted`). See the note below. |
+| `n_refuted_claims` | How many claims were decisively refuted (verdict `refuted`). |
 | `top_refuting_tier` | Evidence tier (`0.00`–`1.00`) of the strongest study that refutes any claim; `0.00` if none. |
+| `refuting_confidence` | The stance judge's confidence (`0.00`–`1.00`) behind the strongest refutation; `0.00` if none. |
+| `claim_scores` | Per-claim continuous scores as `claim_id=score` pairs, separated by `;`. |
 | `refuting_pmids` | PMIDs of every study that refutes any claim, separated by `;`; empty if none. |
-
-### Why `n_refuted_claims` can be `0` while `top_refuting_tier` and `refuting_pmids` have values
-
-This is expected, not a bug.
-
-Each claim is checked against multiple retrieved studies. Some studies may refute the claim,
-others may support it. If a claim has studies on both sides, its verdict is `contested`, not
-`refuted`. A claim is only `refuted` when the retrieved studies refute it and none support it,
-and the refutation is strong enough (the refuting study's evidence tier multiplied by the stance
-judge's confidence reaches at least 0.5).
-
-`refuting_pmids` and `top_refuting_tier` collect every study that refuted any claim, regardless
-of how that claim was ultimately scored. So a `contested` claim (where refuting and supporting studies were both found) still contributes
-its refuting studies to those columns.
-`n_refuted_claims` counts only claims whose final verdict is `refuted`.
-
-In the screenshot, every claim is `supported` or `contested`, so `n_refuted_claims` is `0` even
-though refuting studies were found and appear in `refuting_pmids`.
+| `notes` | A short free-text note (for example a retraction marker or an error), if any. |
 
 ## 🛠️ How it works
 
