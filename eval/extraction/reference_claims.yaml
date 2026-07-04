@@ -1,19 +1,15 @@
 # Claim-extraction evaluation set.
 #
 # Purpose: the validation harness feeds hand-authored claims and BYPASSES the LLM claim
-# extractor, so extraction quality is never measured. This set measures it directly.
+# extractor, so extraction quality is never measured. This set measures it directly: run the
+# extractor on each paper and compare its output to expected_claims on (a) claim precision/recall
+# and (b) condition retention (population / comparator / dose / direction).
 #
-# Each entry pins one paper (copied into papers/) with its parsed title and abstract. Fill in
-# expected_claims by hand: the checkable claims the paper actually asserts, each with its
-# conditions attached (population, comparator, dose, setting) — condition-stripped claims are
-# the dominant source of false verdicts. Keep them faithful to the paper, not exhaustive.
-#
-# Scoring (run later, needs a real LLM extractor): run the extractor on each paper, then compare
-# its output to expected_claims on (a) claim precision/recall (did it find the real claims
-# without inventing any) and (b) condition retention (did it keep population/comparator/dose).
-#
-# STATUS: papers gathered; expected_claims to be authored; the extractor run is deferred (it is
-# the one step here that needs a real LLM call).
+# LIMITATION -- reference not human-verified. For this POC the expected_claims below were
+# extracted by a strong model (Claude), not authored or verified by a human. The eval therefore
+# measures agreement between a strong reference model and the weaker extractor under test
+# (Gemini 2.5 Flash Lite), not agreement with human ground truth; any error in the reference
+# propagates. A human review pass would turn this into a true gold set and is deferred on purpose.
 
 papers:
 - pmid: '38177157'
@@ -36,7 +32,27 @@ papers:
     current therapy primarily targets the underlying cause. There are still major gaps in basic, clinical
     and translational knowledge; thus, further research, with a focus on vulnerable populations, is needed
     to better characterize, detect and effectively treat all forms of pulmonary hypertension.'
-  expected_claims: []
+  expected_claims:
+  - claim_text: Pulmonary hypertension, across all forms, is defined by a mean pulmonary artery pressure
+      greater than 20 mmHg.
+    intervention: mean pulmonary artery pressure > 20 mmHg
+    outcome: diagnosis of pulmonary hypertension
+    population: all forms of pulmonary hypertension
+    comparator: null
+    direction: null
+  - claim_text: Without proactive management, pulmonary hypertension leads to right ventricular hypertrophy
+      and failure, the main cause of death.
+    intervention: untreated pulmonary hypertension
+    outcome: right ventricular failure and death
+    population: null
+    comparator: null
+    direction: causes
+  - claim_text: At least 1% of the world's population is affected by pulmonary hypertension.
+    intervention: pulmonary hypertension
+    outcome: prevalence of at least 1%
+    population: global population
+    comparator: null
+    direction: null
 - pmid: '38469546'
   xml: papers/38469546.xml
   title: 'Rheumatoid arthritis: pathogenesis and therapeutic advances.'
@@ -54,7 +70,26 @@ papers:
     biopsy or RNA-sequencing and cell therapies of mesenchymal stem cells or chimeric antigen receptor
     T-cell are also looked forward. The advancements of pathogenesis and innovations of therapies in RA
     accelerates the progress of RA treatments.
-  expected_claims: []
+  expected_claims:
+  - claim_text: Disease-modifying antirheumatic drugs (DMARDs) effectively control inflammation and decrease
+      bone destruction in rheumatoid arthritis.
+    intervention: disease-modifying antirheumatic drugs (DMARDs)
+    outcome: inflammation and bone destruction
+    population: rheumatoid arthritis patients
+    comparator: null
+    direction: decreases
+  - claim_text: Rheumatoid arthritis affects about 0.2-1% of the global population.
+    intervention: rheumatoid arthritis
+    outcome: prevalence of 0.2-1%
+    population: global population
+    comparator: null
+    direction: null
+  - claim_text: Despite DMARD treatment, overall remission rates in rheumatoid arthritis remain low.
+    intervention: DMARD treatment
+    outcome: remission rate
+    population: rheumatoid arthritis patients
+    comparator: null
+    direction: null
 - pmid: '38733347'
   xml: papers/38733347.xml
   title: 'Alzheimer''s disease: insights into pathology, molecular mechanisms, and therapy.'
@@ -67,7 +102,27 @@ papers:
     risk assessment, and potentially effective prevention strategies. These discoveries are crucial in
     the quest to unravel the complexities of AD, offering a beacon of hope for improved management and
     treatment options for the millions affected by this debilitating disease.
-  expected_claims: []
+  expected_claims:
+  - claim_text: Alzheimer's disease is the leading cause of dementia.
+    intervention: Alzheimer's disease
+    outcome: dementia
+    population: null
+    comparator: null
+    direction: causes
+  - claim_text: Alzheimer's disease is characterized by the accumulation of amyloid plaques and neurofibrillary
+      tangles in the brain.
+    intervention: amyloid plaques and neurofibrillary tangles
+    outcome: Alzheimer's disease pathology
+    population: null
+    comparator: null
+    direction: null
+  - claim_text: Beyond genetic predisposition, aging, systemic inflammation, chronic health conditions,
+      lifestyle, and environmental exposures increase the risk of Alzheimer's disease.
+    intervention: aging, systemic inflammation, lifestyle, and environmental exposures
+    outcome: Alzheimer's disease risk
+    population: null
+    comparator: null
+    direction: increases
 - pmid: '38777539'
   xml: papers/38777539.xml
   title: 'Hereditary Breast Cancer: BRCA Mutations and Beyond.'
@@ -77,7 +132,19 @@ papers:
     demonstrate high and moderate penetrance for breast cancer. This review describes current genetic
     testing, details the specific high and moderate penetrance genes for breast cancer and reviews the
     current approach to screening for breast cancer in patients with these genetic mutations.
-  expected_claims: []
+  expected_claims:
+  - claim_text: BRCA1/2 pathogenic mutations are associated with an increased risk of breast cancer.
+    intervention: BRCA1/2 pathogenic mutations
+    outcome: breast cancer risk
+    population: mutation carriers
+    comparator: null
+    direction: increases
+  - claim_text: Numerous genes beyond BRCA1/2 show high or moderate penetrance for breast cancer.
+    intervention: high- and moderate-penetrance genes beyond BRCA1/2
+    outcome: breast cancer risk
+    population: mutation carriers
+    comparator: null
+    direction: increases
 - pmid: '38928291'
   xml: papers/38928291.xml
   title: Kidney Aging and Chronic Kidney Disease.
@@ -92,7 +159,27 @@ papers:
     and CKD, encompassing morphological changes, functional alterations, and recent advancements in understanding
     the underlying mechanisms. Moreover, we discuss potential therapeutic strategies for targeting senescent
     cells in both the aging process and CKD.
-  expected_claims: []
+  expected_claims:
+  - claim_text: Chronic kidney disease can be considered a state of accelerated and premature aging.
+    intervention: chronic kidney disease
+    outcome: accelerated and premature aging
+    population: null
+    comparator: null
+    direction: null
+  - claim_text: Kidney aging and chronic kidney disease share mechanisms including increased cellular
+      senescence, decreased autophagy, mitochondrial dysfunction, and altered epigenetic regulation.
+    intervention: cellular senescence, reduced autophagy, mitochondrial dysfunction, and epigenetic alteration
+    outcome: kidney aging and chronic kidney disease
+    population: null
+    comparator: null
+    direction: causes
+  - claim_text: Targeting senescent cells is a potential therapeutic strategy for both kidney aging and
+      chronic kidney disease.
+    intervention: targeting senescent cells (senolytics)
+    outcome: kidney aging and chronic kidney disease
+    population: null
+    comparator: null
+    direction: null
 - pmid: '39051318'
   xml: papers/39051318.xml
   title: 'Global Initiative for Asthma Guidelines 2024: An Update.'
@@ -109,7 +196,21 @@ papers:
     asthma based on emerging evidence of efficacy and safety. Overall, the GINA 2024 guidelines offer
     a realistic approach to pediatric asthma care, with a potential for broader applications pending further
     research and adaptation.
-  expected_claims: []
+  expected_claims:
+  - claim_text: The GINA 2024 guidelines updated the role of allergen immunotherapy in pediatric asthma
+      based on emerging evidence of its efficacy and safety.
+    intervention: allergen immunotherapy
+    outcome: pediatric asthma management
+    population: pediatric asthma patients
+    comparator: null
+    direction: null
+  - claim_text: The GINA 2024 guidelines introduced a revised diagnostic flow chart and emphasize alternative
+      tools such as peak flow meters.
+    intervention: GINA 2024 diagnostic recommendations (peak flow meters)
+    outcome: diagnosis of pediatric asthma
+    population: pediatric asthma patients
+    comparator: null
+    direction: null
 - pmid: '39084811'
   xml: papers/39084811.xml
   title: 'Diagnosis and Treatment of Hyperglycemia in Pregnancy: Type 2 Diabetes Mellitus and Gestational
@@ -118,7 +219,14 @@ papers:
     diabetes mellitus (GDM) is rising globally with increasing rates of risk factors for metabolic disease.
     This review summarizes current evidence and recommendations from national and international guidelines
     for diagnosis and management of T2DM and GDM to optimize maternal and neonatal outcomes.
-  expected_claims: []
+  expected_claims:
+  - claim_text: Hyperglycemia in pregnancy from pre-existing type 2 diabetes and gestational diabetes
+      is rising globally, driven by increasing risk factors for metabolic disease.
+    intervention: increasing metabolic-disease risk factors
+    outcome: hyperglycemia in pregnancy (type 2 and gestational diabetes)
+    population: pregnant women
+    comparator: null
+    direction: increases
 - pmid: '39185405'
   xml: papers/39185405.xml
   title: Inflammation mechanism and research progress of COPD.
@@ -131,7 +239,25 @@ papers:
     making treatment difficult. This paper aims to explore the direction of more effective anti-inflammatory
     treatment by analyzing the nature of inflammation and the molecular mechanism of disease occurrence
     and development in COPD patients, and to provide new ideas for the treatment of COPD patients.
-  expected_claims: []
+  expected_claims:
+  - claim_text: COPD is characterized by irreversible, progressive airflow limitation.
+    intervention: chronic obstructive pulmonary disease
+    outcome: irreversible progressive airflow limitation
+    population: null
+    comparator: null
+    direction: null
+  - claim_text: Chronic inflammation is associated with the onset and progression of COPD.
+    intervention: chronic inflammation
+    outcome: COPD onset and progression
+    population: COPD patients
+    comparator: null
+    direction: causes
+  - claim_text: Anti-inflammatory therapy is not a first-line treatment for COPD.
+    intervention: anti-inflammatory therapy
+    outcome: first-line COPD treatment
+    population: COPD patients
+    comparator: null
+    direction: null
 - pmid: '39496213'
   xml: papers/39496213.xml
   title: Contemporary Management of Acute Ischemic Stroke.
@@ -147,7 +273,21 @@ papers:
     additional neuroimaging. Patients who are not candidates for IV thrombolysis within 4.5 h or MT should
     be immediately evaluated for eligibility for extended-window IV thrombolysis or early antiplatelet
     treatment.
-  expected_claims: []
+  expected_claims:
+  - claim_text: Adding mechanical thrombectomy to intravenous thrombolysis expanded the acute ischemic
+      stroke treatment window to 24 hours.
+    intervention: mechanical thrombectomy added to intravenous thrombolysis
+    outcome: therapeutic window and treatment of acute ischemic stroke
+    population: acute ischemic stroke with intracranial large-vessel occlusion
+    comparator: intravenous thrombolysis alone
+    direction: increases
+  - claim_text: Patients with disabling stroke within 4.5 hours of last known well and without contraindications
+      should receive intravenous thrombolysis.
+    intervention: intravenous thrombolysis
+    outcome: treatment of acute ischemic stroke
+    population: disabling stroke within 4.5 h of last known well, no contraindications
+    comparator: null
+    direction: null
 - pmid: '39501335'
   xml: papers/39501335.xml
   title: 'From inflammation to depression: key biomarkers for IBD-related major depressive disorder.'
@@ -169,4 +309,18 @@ papers:
     Finally, we validated the expression patterns of the four diagnostic genes in our cohort. Our study
     discovered four candidate biomarkers for IBD-MDD, providing new insights for the diagnosis and therapeutic
     intervention of serum-based IBD comorbid with MDD.
-  expected_claims: []
+  expected_claims:
+  - claim_text: Patients with inflammatory bowel disease have a significantly higher incidence of comorbid
+      major depressive disorder than the general population.
+    intervention: inflammatory bowel disease
+    outcome: comorbid major depressive disorder
+    population: patients with inflammatory bowel disease
+    comparator: general population
+    direction: increases
+  - claim_text: Four genes (HGF, SPARC, ADAM12, MMP8) are candidate diagnostic biomarkers for IBD comorbid
+      with major depressive disorder.
+    intervention: HGF, SPARC, ADAM12, and MMP8 expression
+    outcome: diagnosis of IBD with comorbid major depressive disorder
+    population: patients with IBD and major depressive disorder
+    comparator: null
+    direction: null

@@ -83,13 +83,19 @@ The harness feeds hand-authored claims and never runs the LLM extractor, so extr
 is unmeasured — the largest untested variable in the pipeline. This set closes that gap.
 
 - `eval/extraction/reference_claims.yaml` — 10 papers (from the representative sample) with their
-  parsed title and abstract, and an `expected_claims` list **to author by hand** (the claims the
-  paper actually asserts, conditions attached).
+  parsed title and abstract, and an `expected_claims` reference set (24 claims, conditions
+  attached).
 - `eval/extraction/papers/` — the pinned paper XML.
 - **Scoring** (deferred — the one step here that needs a real LLM): run the extractor on each
   paper, then compare its output to `expected_claims` on claim precision/recall (found the real
-  claims without inventing any) and condition retention (kept population/comparator/dose).
-- **Status:** papers gathered; expected claims to be authored; extractor run deferred.
+  claims without inventing any) and condition retention (kept population/comparator/direction).
+- **Limitation — reference not human-verified:** the `expected_claims` were extracted by a strong
+  model (Claude), not human-authored or verified. So the eval measures agreement between a strong
+  reference model and the weaker extractor under test (Gemini 2.5 Flash Lite), not agreement with
+  human ground truth; any reference error propagates. A human review pass would make it a true
+  gold set — deferred for the POC.
+- **Status:** reference claims authored (strong model); the extractor run and scoring are
+  deferred (the extractor run is the one step needing a real LLM).
 
 ## Output locations
 
