@@ -112,8 +112,11 @@ medscreen-graph            # render the evidence graph to reports/graph.html
 pytest                   # unit tests (network tests are opt-in: pytest -m live)
 ```
 
-`medscreen-run` defaults to stub backends (offline, no key). What each metric means, which need a
-real LLM backend, and the latest results are documented in [`eval/README.md`](eval/README.md).
+`medscreen-run` defaults to stub backends (offline, no key). On the gold slice the pipeline
+reaches 90% retrieval recall, 85% stance recall, and 0 of 12 false drops on the still-true
+controls (mislabelled controls become `contested` down-weights, not drops); claim extraction
+reaches 83% recall with strong condition retention. What each metric means, which need a real LLM
+backend, and the full results are in [`eval/README.md`](eval/README.md).
 
 ## 🌀 Visualization (optional)
 
