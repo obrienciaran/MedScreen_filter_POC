@@ -120,11 +120,10 @@ good-faith science superseded by a newer study (found by keyword/high-tier searc
 > (Gemini 2.5 Flash Lite): 85% overall stance recall (17 of 20 answer keys recognised as
 > refuting; the misses are the two retrieval misses plus one condition-mismatch). The
 > false-contradiction rate (a control with any candidate labelled refuting) is 25% (3 of 12).
-> Crucially, none of those three would be dropped: each has more supporting than refuting
-> evidence, so the filter scores them `contested` (downweight), not `refuted`. The false DROP
-> rate on controls is 0 of 12 — the precision-first floors hold. The residual softness is a
-> stance-judge limitation, not a retrieval one. An earlier stub-ranked run gave the same 85% /
-> 25% / 0-drops, so ranking quality did not move the headline numbers.
+> None of those three is dropped: each has more supporting than refuting evidence, so the filter
+> scores it `contested` (downweight), not `refuted`. The false-drop rate on controls is 0 of 12,
+> because the strict drop thresholds turn a mislabelled control into a down-weight rather than a
+> drop. The residual softness is a stance-judge limitation, not a retrieval one.
 >
 > Claim extraction (Gemini 2.5 Flash Lite) was measured against a strong-model reference: 83%
 > claim recall and strong condition retention (93-100% for population/comparator/direction), so
