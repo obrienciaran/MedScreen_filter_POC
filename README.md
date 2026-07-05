@@ -1,4 +1,4 @@
-# 🏥 MedScreen — Evidence-Grounded Data Quality Filter for Medical Papers
+# 🏥 MedScreen: an evidence-based quality filter for medical papers
 
 ## What this is
 
@@ -47,7 +47,7 @@ paper in training. The mapping is fixed:
 | `refuted` | `drop` | High-tier evidence contradicts the claim. |
 | `contested` | `downweight` | Evidence points both ways, or the refutation is weak. |
 | `supported` | `keep` | Evidence backs the claim, with no credible refutation. |
-| `neutral` | `keep` | Only neutral evidence was found; inconclusive, and absence of refutation is not proof of falsity. |
+| `neutral` | `keep` | Only neutral evidence was found, so the result is inconclusive. A missing refutation does not prove a claim false. |
 | `ungrounded` | `review` | No evidence was found at all, so the claim is not grounded in the literature and is flagged for a human. |
 
 A paper takes the verdict and action of its single most damning claim.
@@ -76,8 +76,8 @@ For each paper:
    but different scores.
 
 The LLM handles only extraction and stance. It does not run the search, score papers, or decide
-what is kept. The pipeline also runs offline on stub backends so you can check the plumbing
-without a key or network call; stub output is a placeholder, not a real result.
+what is kept. The pipeline also runs offline on stub backends so you can check that it runs
+without a key or a network call. Stub output is a placeholder, not a real result.
 
 See the [design notes](DESIGN.md) for how evidence is found, how scoring works, and how retrieval
 is validated.
@@ -103,7 +103,7 @@ export GEMINI_API_KEY=...      # or ANTHROPIC_API_KEY / OPENAI_API_KEY
 ## 🏃 Run the filter
 
 ```bash
-# Offline stub backends — no key needed:
+# Offline stub backends (no key needed):
 medscreen-filter --input path/to/pubmed_xml_dir
 
 # Real backends (LLM extraction + stance, live retrieval):
@@ -127,7 +127,7 @@ pytest                   # unit tests (network tests are opt-in: pytest -m live)
 
 `medscreen-run` defaults to stub backends (offline, no key). On the gold set the pipeline
 retrieves 90% of the known disproving studies and correctly recognises 85% of them as
-contradicting the claim. None of the 12 known-good control papers were wrongly dropped; a few
+contradicting the claim. None of the 12 known-good control papers were wrongly dropped. A few
 were flagged for down-weighting instead, which is the safe and reversible action. Claim
 extraction finds 83% of the expected claims and keeps their conditions intact. What each metric
 means, which need a real LLM backend, and the full results are in [`eval/README.md`](eval/README.md).

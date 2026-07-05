@@ -19,11 +19,11 @@ Built by `scripts/fetch_trial_xml.py`.
 A plain sample of recent papers across common areas of medicine. Retracted
 papers are left out on purpose. These are normal papers, so the filter should
 keep most of them. Use this set to see that the filter does not wrongly flag
-good papers, and to measure how often it does (the over-flag rate).
+good papers, and to measure how often it does (how many it fails to keep).
 
 Built by `scripts/fetch_representative_xml.py`. The default run fetches the
-canonical 10 (one per topic). Scale it up to measure the over-flag rate on more
-than ten papers:
+canonical 10 (one per topic). Scale it up to measure how many good papers the
+filter fails to keep across more than ten papers:
 
 ```bash
 python scripts/fetch_representative_xml.py --target 80 --per-topic 2 \
@@ -32,7 +32,8 @@ medscreen-filter --input data/representative_large --out-csv reports/representat
 python scripts/flag_audit.py --csv reports/representative.csv
 ```
 
-`flag_audit.py` reads the filter CSV (offline, no LLM) and reports the action
-distribution, the over-flag rate, and a table of just the flagged papers
-(`downweight` / `drop` / `review`) to inspect. On this presumed-keep set every
-flagged paper is a candidate false positive worth a look.
+`flag_audit.py` reads the filter CSV (offline, no LLM) and reports how the papers
+were split across `keep`, `downweight`, `drop`, and `review`, how many were not
+kept, and a table of just those not-kept papers to inspect. On a set of ordinary
+papers the filter should keep, every paper it did not keep is a candidate false
+positive worth a look.

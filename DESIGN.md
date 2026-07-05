@@ -1,4 +1,4 @@
-# 🏥 MedScreen — Design notes
+# 🏥 MedScreen: design notes
 
 Background detail behind the filter. The main [`README.md`](README.md) covers what it produces
 and how to run it. This file explains how evidence is found, how a paper is scored, how the
@@ -76,8 +76,8 @@ retrieved evidence, and gated by strict drop thresholds.
    high-confidence, corroborated cases (thresholds in `scoring.py`).
 
    A paper that was correct when written and later superseded by newer work, but never actually
-   contradicted, is kept on purpose. Science is incremental, and a once-true paper is not false;
-   only a genuine refutation (subsequent evidence that contradicts the claim) moves it off `keep`.
+   contradicted, is kept on purpose. Science is incremental, and a once-true paper is not false.
+   Only a genuine refutation (subsequent evidence that contradicts the claim) moves it off `keep`.
 3. Roll up to the paper by its most damning claim: lowest score, worst verdict. `refuted` drops
    the paper, `contested` down-weights it, `supported` and `neutral` keep it, `ungrounded` flags
    it for review. Neutral is kept on purpose, since a missing refutation is not proof a claim is
@@ -112,7 +112,7 @@ advance. It runs the filter's search and checks how often it finds the known stu
 stages so a failure traces to the right one:
 
 - Retrieval recall: of the disproving studies that exist, the fraction the search pulled back.
-  Model-independent. The headline number.
+  It does not depend on the model, so it is the main number.
 - Stance recall: of those fetched, the fraction the model labelled refuting.
 - Recall@k: retrieval recall within the top k results (k = 1, 5, 10, 20).
 - False-contradiction rate: fraction of still-true controls wrongly flagged refuted (lower is
@@ -125,14 +125,14 @@ Each miss is tagged with a root cause (`not_indexed`, `entity_miss`, `retrieved_
 The gold set holds two kinds of `reversed` claim, tagged by `category`. A `reversal` is
 good-faith science superseded by a newer study (found by keyword/high-tier search). A
 `fabrication` is retracted misconduct whose disproving evidence is the retraction notice
-(found via the retraction link) — a distinct path reached by a retraction-targeted query rung.
+(found via the retraction link). That is a separate path, reached by a retraction-targeted query.
 
 > Status: retrieval recall is 90% (18 of 20 reversed) on the gold slice (16 reversals +
 > 4 fabrications + 12 controls), measured model-free via `medscreen-build-cache` +
 > `medscreen-run --use-cache`. Two misses remain. The peptic-ulcer etiology reversal shares only
 > the disease with its refutation ("stress and acid" vs "H. pylori"), so no keyword or MeSH query
-> finds it without already naming the answer (bacteria) — a known limit of keyword retrieval for
-> conceptual reversals. The vertebroplasty reversal's landmark trial is buried among many similar
+> finds it without already naming the answer (bacteria). This is a known limit of keyword search
+> for conceptual reversals. The vertebroplasty reversal's landmark trial is buried among many similar
 > high-tier trials that the condition does not disambiguate. Both are accepted false negatives
 > rather than over-broadening the search and risking control precision; bridging them needs a
 > semantic query-expansion step, deferred on purpose.
@@ -162,8 +162,8 @@ Why not trust well-cited sources, like a h-index? Reputation judges who is speak
 The belief that hormone replacement therapy prevents coronary heart disease was highly cited the
 entire time it was wrong, until the 2002 Women's Health Initiative trial found the opposite.
 
-Why not just count refuted claims? That assumes the hard part — finding and confirming the
-refuting study — is already done. This POC tests that step instead of taking it for granted.
+Why not just count refuted claims? That assumes the hard part, finding and confirming the
+refuting study, is already done. This POC tests that step instead of taking it for granted.
 
 ### Related work
 

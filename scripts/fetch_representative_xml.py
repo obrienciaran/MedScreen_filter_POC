@@ -10,11 +10,11 @@ MEDSCREEN_INSECURE_TLS=1 / MEDSCREEN_CA_BUNDLE behind a TLS-terminating proxy.
 
     python scripts/fetch_representative_xml.py                     # canonical 10-paper sample
     python scripts/fetch_representative_xml.py --target 80 --per-topic 2 \
-        --out-dir data/representative_large                        # larger presumed-keep set
+        --out-dir data/representative_large                        # larger sample
 
-Scaling the set up lets the over-flag rate (how often the filter down-weights or drops an
-ordinary paper it should keep) be measured on more than ten papers. Pair it with
-scripts/flag_audit.py to summarise the run and list the flagged papers to inspect.
+Scaling the set up lets you measure, on more than ten papers, how often the filter fails to keep
+an ordinary paper it should keep (down-weighting or dropping it). Pair it with
+scripts/flag_audit.py to summarise the run and list the papers it did not keep.
 """
 
 from __future__ import annotations
@@ -31,8 +31,8 @@ from pathlib import Path
 EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 DEFAULT_OUT_DIR = Path("data/representative")
 
-# Ordinary recent papers across common clinical areas, for a representative "presumed-keep"
-# spread. The default run takes one paper per topic and stops at the first ``--target``; a
+# Ordinary recent papers across common clinical areas, a representative sample the filter should
+# mostly keep. The default run takes one paper per topic and stops at the first ``--target``. A
 # larger set is reached by raising ``--per-topic`` and ``--target``, which is why the pool is
 # long. The first ten topics reproduce the original canonical sample, so the default run is
 # unchanged.

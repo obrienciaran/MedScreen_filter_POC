@@ -1,19 +1,20 @@
-"""Summarise a filter run over a presumed-keep set and list the papers it flagged.
+"""Summarise a filter run over a set of ordinary papers and list the ones it did not keep.
 
 The representative set (``data/representative/``, built by ``fetch_representative_xml.py``) is
 ordinary recent papers with no retractions, so the filter should keep almost all of them. Any
 paper it down-weights, drops, or sends to review is therefore a candidate false positive worth a
-human look. This script reads the flat CSV that ``medscreen-filter`` writes and reports the
-action distribution, the over-flag rate, and a table of just the flagged papers with the columns
-needed to audit each one.
+human look. This script reads the flat CSV that ``medscreen-filter`` writes and reports how the
+papers were split across the four actions, how many were not kept, and a table of just those
+not-kept papers with the columns needed to check each one.
 
 It runs offline on an existing CSV, so it needs no network and no LLM. Produce the CSV first:
 
     medscreen-filter --input data/representative --out-csv reports/representative.csv
     python scripts/flag_audit.py --csv reports/representative.csv
 
-An ordinary paper that keeps is expected; a flagged one is either a real issue the filter caught
-or an over-flag to investigate. The point of the report is to make that set small and reviewable.
+Keeping an ordinary paper is the expected outcome. A paper that was not kept is either a real
+issue the filter caught or a mistake to investigate. The report exists to make that set small and
+easy to review.
 """
 
 from __future__ import annotations
@@ -54,15 +55,15 @@ def build_report(rows: list[dict[str, str]], *, source: str) -> str:
     flag_rate = len(flagged) / total if total else 0.0
 
     lines = [
-        "# Over-flag audit (presumed-keep set)",
+        "# Papers the filter did not keep",
         "",
         f"- Source CSV: `{source}`",
         f"- Papers: {total}",
-        f"- **Over-flag rate: {flag_rate * 100:.0f}%** ({len(flagged)}/{total} not kept)",
+        f"- **Not kept: {len(flagged)} of {total} ({flag_rate * 100:.0f}%)**",
         "",
-        "On an ordinary, non-retracted set the expected action is `keep`. Each flagged paper below",
-        "is a candidate false positive: either a real issue the filter caught or an over-flag to",
-        "investigate. Read `refuting_pmids` and `notes` to see what drove the flag.",
+        "On an ordinary, non-retracted set the expected action is `keep`. Each paper below was not",
+        "kept, so it is a candidate false positive: either a real issue the filter caught or a",
+        "mistake to investigate. Read `refuting_pmids` and `notes` to see what drove the decision.",
         "",
         "## Action distribution",
         "",
@@ -76,9 +77,9 @@ def build_report(rows: list[dict[str, str]], *, source: str) -> str:
         if action not in ("keep", *_FLAG_ACTIONS):
             lines.append(f"| `{action}` | {n} |")
 
-    lines += ["", "## Flagged papers", ""]
+    lines += ["", "## Papers not kept", ""]
     if not flagged:
-        lines.append("_None flagged: every paper was kept._")
+        lines.append("_Every paper was kept._")
         return "\n".join(lines) + "\n"
 
     lines.append("| " + " | ".join(_AUDIT_COLUMNS) + " |")
@@ -96,7 +97,7 @@ def build_report(rows: list[dict[str, str]], *, source: str) -> str:
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Audit a filter CSV for over-flagged ordinary papers.")
+    ap = argparse.ArgumentParser(description="Report which ordinary papers the filter did not keep.")
     ap.add_argument("--csv", default="reports/filter.csv", help="filter output CSV to audit")
     ap.add_argument("--out", default=None, help="markdown output path (default reports/flag_audit-<stamp>.md)")
     args = ap.parse_args()
@@ -114,7 +115,7 @@ def main() -> None:
     total = len(rows)
     flagged = sum(1 for r in rows if r.get("action", "") in _FLAG_ACTIONS)
     rate = flagged / total * 100 if total else 0.0
-    print(f"Over-flag rate: {rate:.0f}% ({flagged}/{total} not kept)")
+    print(f"Not kept: {flagged} of {total} ({rate:.0f}%)")
     print(f"Wrote {out_path}")
 
 
