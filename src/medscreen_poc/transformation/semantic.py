@@ -29,6 +29,14 @@ Two ranking backends are available (see ``base.embedder``):
     connection or a downloaded model.
   * ``sbert`` is a real, pretrained biomedical language model. Turn it on with the
     ``embed`` optional dependency and ``MEDSCREEN_EMBED_BACKEND=sbert``.
+
+Status: ``sbert`` is optional and off by default, and is not required for the current proof of
+concept. Retrieval recall does not depend on ranking at all, and on the gold slice ``sbert`` gave
+the same stance recall and false-contradiction as the ``stub`` default, so ranking quality did
+not change the measured results. The production filter (``orchestration.pipeline``) does not rank
+either: it sends every retrieved candidate, capped at ``limit``, to the stance step. ``sbert`` is
+kept for two forward-looking uses only: the ``recall@k`` metric, and a future step that would
+rank then truncate a large candidate pool to cap stance (LLM) cost when scaling beyond this slice.
 """
 
 from __future__ import annotations
@@ -61,10 +69,17 @@ class StubEmbedder:
 
 
 class SentenceTransformerEmbedder:
-    """Real ranking using a pretrained biomedical language model, via the
-    sentence-transformers package (an optional dependency)."""
+    """Real ranking using a pretrained biomedical language model, via the sentence-transformers
+    package (the optional ``embed`` dependency).
+
+    Optional and off by default: it is not needed for the current proof of concept (see the module
+    docstring for why) and is kept for the ``recall@k`` metric and future scaling. The
+    sentence-transformers import is lazy, so this class and the heavy dependency cost nothing
+    unless ``sbert`` is actually selected."""
 
     def __init__(self, model_name: str = "pritamdeka/S-PubMedBert-MS-MARCO") -> None:
+        # Lazy import: sentence-transformers (and torch) load only when sbert is selected, so the
+        # default stub path never touches the optional dependency.
         from sentence_transformers import SentenceTransformer  # lazy import
 
         self.name = model_name
@@ -75,6 +90,8 @@ class SentenceTransformerEmbedder:
 
 
 def get_embedder() -> Embedder:
+    # The stub is the default and is all the POC needs. sbert is opt-in via the `embed` extra plus
+    # MEDSCREEN_EMBED_BACKEND=sbert, kept for recall@k and future ranking-based truncation.
     backend = os.environ.get("MEDSCREEN_EMBED_BACKEND", "stub").lower()
     if backend == "sbert":
         return SentenceTransformerEmbedder(
