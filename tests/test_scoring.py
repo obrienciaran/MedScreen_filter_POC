@@ -85,15 +85,15 @@ def test_no_evidence_is_ungrounded_and_flagged_for_review():
     assert pv.grounded is False
 
 
-def test_neutral_evidence_is_unverified_and_kept():
+def test_neutral_evidence_is_neutral_verdict_and_kept():
     claim = _claim()
     cands = [_cand("N", ["Journal Article"])]
     labels = [StanceLabel(claim_id=claim.claim_id, candidate_ext_id="N",
                           stance=Stance.NEUTRAL, confidence=0.2)]
     cv = score_claim(claim, cands, labels)
-    assert cv.verdict is Verdict.UNVERIFIED
+    assert cv.verdict is Verdict.NEUTRAL
     pv = score_paper(PaperRecord(pmid="1"), [cv])
-    assert pv.verdict is Verdict.UNVERIFIED
+    assert pv.verdict is Verdict.NEUTRAL
     assert pv.action is Action.KEEP
     assert pv.grounded is False
 
@@ -164,6 +164,59 @@ def test_volume_of_low_tier_refuters_does_not_force_a_drop():
     ]
     cv = score_claim(claim, cands, labels)
     assert cv.verdict is Verdict.CONTESTED
+
+
+def test_superseded_by_newer_high_tier_neutral_downweights_not_drops():
+    # A supported claim with a newer high-tier neutral study on the same topic is superseded:
+    # down-weighted (contested), never dropped, and flagged on both the claim and the paper.
+    claim = _claim()
+    cands = [
+        _cand("S", ["Meta-Analysis"]),
+        Candidate(source="pubmed", ext_id="M", pub_types=["Meta-Analysis"], year=2020),
+    ]
+    labels = [
+        StanceLabel(claim_id=claim.claim_id, candidate_ext_id="S", stance=Stance.SUPPORTS, confidence=0.8),
+        StanceLabel(claim_id=claim.claim_id, candidate_ext_id="M", stance=Stance.NEUTRAL, confidence=0.5),
+    ]
+    cv = score_claim(claim, cands, labels, paper_year=2005)
+    assert cv.superseded is True
+    assert cv.verdict is Verdict.CONTESTED
+    pv = score_paper(PaperRecord(pmid="1", year=2005), [cv])
+    assert pv.action is Action.DOWNWEIGHT
+    assert pv.superseded is True
+
+
+def test_supersession_requires_newer_and_high_tier():
+    # Older high-tier neutral, or newer low-tier neutral, does not supersede a supported claim.
+    claim = _claim()
+    cands = [
+        _cand("S", ["Meta-Analysis"]),
+        Candidate(source="pubmed", ext_id="OLD", pub_types=["Meta-Analysis"], year=2000),
+        Candidate(source="pubmed", ext_id="LOW", pub_types=["Case Reports"], year=2020),
+    ]
+    labels = [
+        StanceLabel(claim_id=claim.claim_id, candidate_ext_id="S", stance=Stance.SUPPORTS, confidence=0.8),
+        StanceLabel(claim_id=claim.claim_id, candidate_ext_id="OLD", stance=Stance.NEUTRAL, confidence=0.5),
+        StanceLabel(claim_id=claim.claim_id, candidate_ext_id="LOW", stance=Stance.NEUTRAL, confidence=0.5),
+    ]
+    cv = score_claim(claim, cands, labels, paper_year=2005)
+    assert cv.superseded is False
+    assert cv.verdict is Verdict.SUPPORTED
+
+
+def test_supersession_never_upgrades_a_refuted_claim_away_from_drop():
+    # Supersession only ever pulls toward contested; a genuinely refuted claim stays refuted.
+    claim = _claim()
+    cands = [
+        _cand("R", ["Randomized Controlled Trial"]),
+        Candidate(source="pubmed", ext_id="M", pub_types=["Meta-Analysis"], year=2020),
+    ]
+    labels = [
+        StanceLabel(claim_id=claim.claim_id, candidate_ext_id="R", stance=Stance.REFUTES, confidence=0.9),
+        StanceLabel(claim_id=claim.claim_id, candidate_ext_id="M", stance=Stance.NEUTRAL, confidence=0.5),
+    ]
+    cv = score_claim(claim, cands, labels, paper_year=2005)
+    assert cv.verdict is Verdict.REFUTED
 
 
 def test_paper_judged_by_most_damning_claim():

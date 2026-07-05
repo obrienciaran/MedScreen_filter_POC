@@ -252,7 +252,7 @@ _STANCE_EXPLANATIONS = {
 }
 
 # Claim/paper node colour by its status string. Covers gold-set statuses (reversed,
-# still_true) and filter verdicts (refuted, contested, supported, unverified). Reversed
+# still_true) and filter verdicts (refuted, contested, supported, neutral). Reversed
 # claims are the ones under test (navy); still-true controls reuse the "supports" green so
 # the colour itself signals "nothing wrong here", matching the stance edge palette.
 _CLAIM_COLOURS = {
@@ -261,7 +261,7 @@ _CLAIM_COLOURS = {
     "refuted": {"background": "#c92a2a", "border": "#7d1a1a"},
     "contested": {"background": "#e8590c", "border": "#9c3d05"},
     "supported": {"background": "#2b8a3e", "border": "#1a5828"},
-    "unverified": {"background": "#495057", "border": "#2b3035"},
+    "neutral": {"background": "#495057", "border": "#2b3035"},
     "ungrounded": {"background": "#ae3ec9", "border": "#6a2079"},
 }
 _CLAIM_DEFAULT = {"background": "#11335c", "border": "#081f3a"}
@@ -392,7 +392,7 @@ def _control_only_evidence(data: GraphData) -> set[str]:
 _STATUS_LABELS = {
     "reversed": "Claim later overturned", "still_true": "Claim still accepted (control)",
     "refuted": "Refuted paper", "contested": "Contested paper",
-    "supported": "Supported paper", "unverified": "Unverified paper",
+    "supported": "Supported paper", "neutral": "Neutral paper",
     "ungrounded": "Ungrounded paper (no evidence found)",
 }
 

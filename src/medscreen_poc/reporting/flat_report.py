@@ -15,8 +15,8 @@ from ..schema import PaperVerdict
 
 COLUMNS = [
     "pmid", "title", "verdict", "score", "action", "verdict_basis", "refutation_timing",
-    "grounded", "n_claims", "n_refuted_claims", "top_refuting_tier", "refuting_confidence",
-    "claim_scores", "refuting_pmids", "notes",
+    "grounded", "superseded", "n_claims", "n_refuted_claims", "top_refuting_tier",
+    "refuting_confidence", "claim_scores", "refuting_pmids", "notes",
 ]
 
 
@@ -40,7 +40,8 @@ def write_flat_csv(verdicts: list[PaperVerdict], path: str | Path) -> Path:
             claim_scores = ";".join(f"{cv.claim_id}={cv.score:.3f}" for cv in v.claim_verdicts)
             w.writerow([
                 v.pmid, v.title, v.verdict.value, f"{v.score:.3f}", v.action.value,
-                v.verdict_basis, v.refutation_timing, str(v.grounded).lower(), v.n_claims,
+                v.verdict_basis, v.refutation_timing, str(v.grounded).lower(),
+                str(v.superseded).lower(), v.n_claims,
                 v.n_refuted_claims, f"{v.top_refuting_tier:.2f}", f"{refuting_confidence:.2f}",
                 claim_scores, ";".join(v.refuting_pmids), v.notes,
             ])

@@ -66,16 +66,27 @@ retrieved evidence, and gated by strict drop thresholds.
    closes a diminishing share of the remaining gap toward the maximum. This means a consistent
    body of evidence counts for more than one study, while a pile-up of weak studies cannot
    overpower a strong one (pulls already fold in evidence tier, so a case report adds little).
-   Verdict is `refuted`, `contested`, `supported`, or `unverified` (no usable evidence). A claim
+   Verdict is `refuted`, `contested`, `supported`, `neutral` (only neutral evidence), or
+   `ungrounded` (no evidence at all). A claim
    is `refuted` only when the refutation is unambiguous: aggregate refuting strength ≥ 0.6, and
    the single strongest refuting study is tier ≥ 0.8 (RCT or higher) with stance confidence
    ≥ 0.7. Anchoring the tier and confidence floors on one genuinely high-quality study keeps
    volume of low-tier evidence from forcing a drop. Anything weaker, or any case with evidence on
    both sides, is `contested` rather than `refuted`. This reserves the destructive action for
    high-precision cases (thresholds in `scoring.py`).
+
+   One extra case is folded in here: a claim that is *superseded but not contradicted*. When a
+   claim is not refuted, yet a newer study of tier ≥ 0.85 (meta-analysis, systematic review, or
+   guideline) published after the paper is judged neutral toward it, the evidence base has moved
+   past the paper even though nothing overturned it. Such a claim is pulled down from `supported`
+   or `neutral` to `contested` (down-weight), never to `refuted`, and the paper's `superseded`
+   flag is set. The bar is deliberately high (newer AND high-tier AND neutral) so ordinary
+   corroborated papers are not swept up; supersession needs the paper's publication year, so it
+   is skipped when that is missing.
 3. Roll up to the paper by its most damning claim: lowest score, worst verdict. `refuted` drops
-   the paper, `contested` down-weights it, `supported` and `unverified` keep it. Unverified is
-   kept on purpose, since a missing refutation is not proof a claim is false.
+   the paper, `contested` down-weights it, `supported` and `neutral` keep it, `ungrounded` flags
+   it for review. Neutral is kept on purpose, since a missing refutation is not proof a claim is
+   false.
 
 Each row also carries two provenance flags. `verdict_basis` (`retraction` / `evidence` /
 `none`) records whether the verdict came from the retraction fast path or from retrieved

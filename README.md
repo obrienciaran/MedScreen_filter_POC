@@ -25,12 +25,13 @@ The columns in the screenshot:
 |---|---|
 | `pmid` | PubMed identifier of the paper. |
 | `title` | Article title. |
-| `verdict` | Truthfulness verdict: `supported`, `contested`, `refuted`, `unverified`, or `ungrounded`. |
+| `verdict` | Truthfulness verdict: `supported`, `contested`, `refuted`, `neutral`, or `ungrounded` (see the verdict-to-action table below). |
 | `score` | Truthfulness score, `0.000` (refuted) to `1.000` (well supported). |
 | `action` | Recommended training action: `keep`, `downweight`, `drop`, or `review`. |
 | `verdict_basis` | What the verdict rests on: `retraction` (a formal retraction link in the paper's own record), `evidence` (retrieved literature), or `none`. |
 | `refutation_timing` | Whether the refuting evidence came `prior` to the paper, `subsequent` to it (the reversal pattern), or `unknown`. |
 | `grounded` | `true` if any supporting evidence was found for the paper's claims, else `false`. |
+| `superseded` | `true` if newer higher-tier evidence has appeared that does not support a claim (outdated but not refuted); it down-weights the paper, never drops it. |
 | `n_claims` | How many claims were extracted from the paper. |
 | `n_refuted_claims` | How many claims were decisively refuted (verdict `refuted`). |
 | `top_refuting_tier` | Evidence tier (`0.00`–`1.00`) of the strongest study that refutes any claim; `0.00` if none. |
@@ -38,6 +39,19 @@ The columns in the screenshot:
 | `claim_scores` | Per-claim continuous scores as `claim_id=score` pairs, separated by `;`. |
 | `refuting_pmids` | PMIDs of every study that refutes any claim, separated by `;`; empty if none. |
 | `notes` | A short free-text note (for example a retraction marker or an error), if any. |
+
+The `verdict` is a truthfulness category; the `action` is what it recommends doing with the
+paper in training. The mapping is fixed:
+
+| Verdict | Action | Meaning |
+|---|---|---|
+| `refuted` | `drop` | High-tier evidence contradicts the claim. |
+| `contested` | `downweight` | Evidence points both ways, or the refutation is weak. |
+| `supported` | `keep` | Evidence backs the claim, with no credible refutation. |
+| `neutral` | `keep` | Only neutral evidence was found; inconclusive, and absence of refutation is not proof of falsity. |
+| `ungrounded` | `review` | No evidence was found at all, so the claim is not grounded in the literature and is flagged for a human. |
+
+A paper takes the verdict and action of its single most damning claim.
 
 ## 🛠️ How it works
 

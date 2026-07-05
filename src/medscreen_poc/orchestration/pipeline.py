@@ -86,7 +86,7 @@ def run_paper(
         labels = classify_batch(
             stance_backend, claim.as_gold_entry(), candidates, executor=stance_executor
         )
-        claim_verdicts.append(score_claim(claim, candidates, labels))
+        claim_verdicts.append(score_claim(claim, candidates, labels, paper_year=paper.year))
     return score_paper(paper, claim_verdicts)
 
 
@@ -99,7 +99,7 @@ def _run_paper_safe(
     limit: int,
     stance_executor: ThreadPoolExecutor | None = None,
 ) -> PaperVerdict:
-    """Run one paper, but turn an unexpected failure into an ``unverified`` row instead of
+    """Run one paper, but turn an unexpected failure into a ``neutral`` row instead of
     aborting the whole batch. A transient network error on one paper should not discard the
     work already done on the others (which matters when those calls cost money)."""
     try:
@@ -108,9 +108,9 @@ def _run_paper_safe(
             stance_backend=stance_backend, limit=limit, stance_executor=stance_executor,
         )
     except Exception as exc:  # noqa: BLE001 - isolate one paper's failure from the batch
-        print(f"ERROR scoring {paper.pmid}, keeping as unverified. {type(exc).__name__}: {exc}")
+        print(f"ERROR scoring {paper.pmid}, keeping as neutral. {type(exc).__name__}: {exc}")
         return PaperVerdict(
-            pmid=paper.pmid, title=paper.title, verdict=Verdict.UNVERIFIED, score=0.5,
+            pmid=paper.pmid, title=paper.title, verdict=Verdict.NEUTRAL, score=0.5,
             action=Action.KEEP, verdict_basis="none", refutation_timing="unknown",
             n_claims=0, n_refuted_claims=0, top_refuting_tier=0.0,
             notes=f"error: {type(exc).__name__}: {exc}",

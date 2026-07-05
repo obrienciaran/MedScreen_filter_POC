@@ -58,7 +58,7 @@ not.
   consensus-reversal gold slice, the dependency the filter's accuracy rests on.
 - PubMed XML only. XML over .txt because it carries the
   CommentsCorrectionsList retraction/comment links, publication types, and MeSH.
-- Claim-level scoring. Verdict is supported / contested / refuted / unverified; action is keep / downweight / drop.
+- Claim-level scoring. Verdict is supported / contested / refuted / neutral / ungrounded; action is keep / downweight / drop / review.
 - Sources: PubMed E-utilities and Europe PMC REST. No Retraction Watch, UMLS, or licensed corpus.
 - Slice: consensus-reversal cases (HRT and WHI, CAST, H. pylori, hospitalized COVID and hydroxychloroquine).
 - DuckDB is the single store, exact brute-force cosine, no ANN index yet.
@@ -87,12 +87,12 @@ claim, then rolls up to the paper.
   just the single strongest study: the strongest sets the floor, then each further agreeing study
   adds a diminishing share, so a consistent body of evidence counts for more than one study while
   weak studies in bulk cannot overpower a strong one. Its verdict is refuted (a strong high-tier
-  refutation), contested (evidence both ways, or a weak refutation), supported (support only), or
-  unverified (no usable evidence).
+  refutation), contested (evidence both ways, or a weak refutation), supported (support only),
+  neutral (only neutral evidence, no usable signal), or ungrounded (no evidence found at all).
 - A paper is judged by its most damning claim: its score is the lowest claim score and its
   verdict is the worst claim verdict. The verdict maps to an action: refuted drops the paper,
-  contested down-weights it, supported or unverified keeps it. Unverified is kept on purpose,
-  because absent refutation is not proof a claim is false.
+  contested down-weights it, supported or neutral keeps it, ungrounded flags it for review.
+  Neutral is kept on purpose, because absent refutation is not proof a claim is false.
 
 ### Metrics (the validation tool's recall)
 

@@ -45,7 +45,16 @@ DROP_MIN_CONFIDENCE = 0.7  # stance judge must be confident in that strongest re
 # back to the old single-strongest-pull behaviour.
 CORROBORATION_WEIGHT = 0.5
 
-# Default action per verdict. Unverified is kept, because a missing refutation when neutral
+# A claim is "superseded but not contradicted" when it is not refuted, yet newer higher-tier
+# evidence on the same claim has appeared that does not support it: a study of at least this tier
+# (meta-analysis / systematic review / guideline), published after the paper, that the stance
+# judge labelled neutral. The paper was defensible when written but the evidence base has moved
+# past it. This never drops a paper, it only pulls an otherwise supported or neutral claim down to
+# contested (down-weight). The bar is deliberately high (newer AND high-tier AND neutral) so
+# ordinary corroborated papers are not swept up.
+SUPERSEDE_MIN_TIER = 0.85
+
+# Default action per verdict. Neutral is kept, because a missing refutation when neutral
 # evidence *was* found is not proof of falsity. Ungrounded is different: no evidence was found
 # at all, so the claim has no corroboration in the literature. That is its own signal and is
 # flagged for review rather than silently kept. The continuous score is also written so the
@@ -54,15 +63,23 @@ _ACTION_BY_VERDICT = {
     Verdict.REFUTED: Action.DROP,
     Verdict.CONTESTED: Action.DOWNWEIGHT,
     Verdict.SUPPORTED: Action.KEEP,
-    Verdict.UNVERIFIED: Action.KEEP,
+    Verdict.NEUTRAL: Action.KEEP,
     Verdict.UNGROUNDED: Action.REVIEW,
 }
 
 
 def score_claim(
-    claim: ExtractedClaim, candidates: list[Candidate], labels: list[StanceLabel]
+    claim: ExtractedClaim,
+    candidates: list[Candidate],
+    labels: list[StanceLabel],
+    *,
+    paper_year: int | None = None,
 ) -> ClaimVerdict:
-    """Weigh one claim's evidence into a verdict and a 0..1 truthfulness score."""
+    """Weigh one claim's evidence into a verdict and a 0..1 truthfulness score.
+
+    ``paper_year`` enables supersession detection: with it, a claim that newer higher-tier
+    neutral evidence has moved past (but not refuted) is pulled down to contested.
+    """
     tier = {c.ext_id: c.evidence_tier for c in candidates}
     refuting = [l for l in labels if l.stance is Stance.REFUTES]
     supporting = [l for l in labels if l.stance is Stance.SUPPORTS]
@@ -85,10 +102,11 @@ def score_claim(
     refuting_confidence = top_refuter.confidence if top_refuter else 0.0
     refuting_year = year_by_id.get(top_refuter.candidate_ext_id) if top_refuter else None
 
+    superseded = _is_superseded(candidates, labels, tier, year_by_id, paper_year)
     score = _clamp(0.5 + 0.4 * support_strength - 0.8 * refute_strength)
     verdict = _claim_verdict(
         len(labels), top_refuter is not None, bool(supporting),
-        refute_strength, refuting_tier, refuting_confidence,
+        refute_strength, refuting_tier, refuting_confidence, superseded,
     )
 
     return ClaimVerdict(
@@ -96,9 +114,34 @@ def score_claim(
         n_evidence=len(labels), n_refuting=len(refuting), n_supporting=len(supporting),
         top_refuting_tier=top_refuting_tier, verdict=verdict, score=score,
         refuting_confidence=refuting_confidence, refuting_year=refuting_year,
+        superseded=superseded,
         refuting_pmids=[l.candidate_ext_id for l in refuting],
         supporting_pmids=[l.candidate_ext_id for l in supporting],
     )
+
+
+def _is_superseded(
+    candidates: list[Candidate],
+    labels: list[StanceLabel],
+    tier: dict[str, float],
+    year_by_id: dict[str, int | None],
+    paper_year: int | None,
+) -> bool:
+    """Whether newer higher-tier neutral evidence has moved past this claim.
+
+    True when some candidate the stance judge labelled neutral is at least ``SUPERSEDE_MIN_TIER``
+    and published after the paper. Needs the paper's year; without it supersession is unknown and
+    returns False.
+    """
+    if paper_year is None:
+        return False
+    for label in labels:
+        if label.stance is not Stance.NEUTRAL:
+            continue
+        year = year_by_id.get(label.candidate_ext_id)
+        if year is not None and year > paper_year and tier.get(label.candidate_ext_id, 0.0) >= SUPERSEDE_MIN_TIER:
+            return True
+    return False
 
 
 def _claim_verdict(
@@ -108,6 +151,7 @@ def _claim_verdict(
     refute_strength: float,
     refuting_tier: float,
     refuting_confidence: float,
+    superseded: bool,
 ) -> Verdict:
     if has_refute and has_support:
         return Verdict.CONTESTED  # evidence on both sides is ambiguous, never a drop
@@ -118,11 +162,15 @@ def _claim_verdict(
             and refuting_confidence >= DROP_MIN_CONFIDENCE
         )
         return Verdict.REFUTED if unambiguous else Verdict.CONTESTED
+    # Not refuted, but newer higher-tier evidence has moved past the claim: down-weight it as
+    # contested, never drop. Checked after refutation so a refuted claim keeps its harsher verdict.
+    if superseded:
+        return Verdict.CONTESTED
     if has_support:
         return Verdict.SUPPORTED
     if n_evidence == 0:
         return Verdict.UNGROUNDED  # nothing retrieved: the claim is not grounded in the literature
-    return Verdict.UNVERIFIED  # only neutral evidence: found, but inconclusive
+    return Verdict.NEUTRAL  # only neutral evidence: found, but inconclusive
 
 
 def score_paper(paper: PaperRecord, claim_verdicts: list[ClaimVerdict]) -> PaperVerdict:
@@ -146,6 +194,7 @@ def score_paper(paper: PaperRecord, claim_verdicts: list[ClaimVerdict]) -> Paper
         n_refuted_claims=sum(1 for cv in claim_verdicts if cv.verdict is Verdict.REFUTED),
         top_refuting_tier=max(cv.top_refuting_tier for cv in claim_verdicts),
         grounded=any(cv.n_supporting > 0 for cv in claim_verdicts),
+        superseded=any(cv.superseded for cv in claim_verdicts),
         refuting_pmids=refuting_pmids, claim_verdicts=claim_verdicts,
     )
 
@@ -176,7 +225,7 @@ def _paper_verdict(claim_verdicts: list[ClaimVerdict]) -> Verdict:
         return Verdict.UNGROUNDED
     if Verdict.SUPPORTED in verdicts:
         return Verdict.SUPPORTED
-    return Verdict.UNVERIFIED
+    return Verdict.NEUTRAL
 
 
 def _aggregate_strength(pulls: list[float]) -> float:
