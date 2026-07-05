@@ -25,6 +25,9 @@ reports/representative_large_audit.md
 .env
 .env.local
 
+# Local handoff notes (not committed)
+NEXT_STEPS.md
+
 # Python
 __pycache__/
 *.py[cod]
