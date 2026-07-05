@@ -59,21 +59,21 @@ retrieved evidence, and gated by strict drop thresholds.
 1. Weigh each study by its publication-type evidence tier (guideline 1.0, retraction 0.95,
    systematic review 0.9, meta-analysis 0.85, RCT 0.8, observational 0.5, case report 0.2, else
    0.4). Its pull on a claim is that tier × the model's stance confidence.
-2. Score the claim. Starting at 0.5, aggregated supporting evidence raises the score and
-   aggregated refuting evidence lowers it (refutation weighs about twice as much). The aggregate
-   is not just the single strongest study: the strongest sets the floor (so a lone landmark trial
-   still carries full weight, as the WHI trial did for HRT), then each further agreeing study
-   closes a diminishing share of the remaining gap toward the maximum. This means a consistent
-   body of evidence counts for more than one study, while a pile-up of weak studies cannot
-   overpower a strong one (pulls already fold in evidence tier, so a case report adds little).
-   Verdict is `refuted`, `contested`, `supported`, `neutral` (only neutral evidence), or
-   `ungrounded` (no evidence at all). A claim
-   is `refuted` only when the refutation is unambiguous: aggregate refuting strength ≥ 0.6, and
-   the single strongest refuting study is tier ≥ 0.8 (RCT or higher) with stance confidence
-   ≥ 0.7. Anchoring the tier and confidence floors on one genuinely high-quality study keeps
-   volume of low-tier evidence from forcing a drop. Anything weaker, or any case with evidence on
-   both sides, is `contested` rather than `refuted`. This reserves the destructive action for
-   high-precision cases (thresholds in `scoring.py`).
+2. Score the claim. Starting at 0.5, supporting evidence raises the score and refuting evidence
+   lowers it (refutation weighs about twice as much). Both sides are combined across all the
+   studies found, not read off the single strongest one. The strongest study sets the base, and
+   each further study that agrees adds a smaller amount on top. So a consistent body of evidence
+   counts for more than one study, and many weak studies cannot outweigh one strong study, because
+   each study's weight already reflects its evidence tier (a case report adds very little).
+   The verdict is `refuted`, `contested`, `supported`, `neutral` (only neutral evidence was
+   found), or `ungrounded` (no evidence was found). A claim is `refuted`, which drops the paper,
+   only when the refutation is strong and backed up: at least two separate studies refute it, the
+   combined refuting strength is at least 0.6, and the strongest of those studies is tier 0.8 or
+   higher (an RCT or above) with a stance confidence of at least 0.7. Requiring two studies means
+   a single study refuting one claim of a paper that makes several claims down-weights the paper
+   instead of dropping it, which was the main cause of wrongful drops. Anything weaker, or any
+   claim with evidence on both sides, is `contested` instead. This keeps the drop action for
+   high-confidence, corroborated cases (thresholds in `scoring.py`).
 
    A paper that was correct when written and later superseded by newer work, but never actually
    contradicted, is kept on purpose. Science is incremental, and a once-true paper is not false;
@@ -94,9 +94,9 @@ accepted consensus. Both are written to the flat CSV alongside the continuous pe
 
 Expected, not a bug. Each claim is checked against several retrieved studies; some may refute it,
 others support it. A claim is `refuted` only when studies refute it, none support it, and the
-refutation is unambiguous (aggregate refuting strength ≥ 0.6, and the single strongest refuting
-study is tier ≥ 0.8 with confidence ≥ 0.7). A claim with studies on both sides, or with only a
-weak lone refutation, is `contested`.
+refutation is strong and backed up (at least two studies refute it, combined refuting strength at
+least 0.6, and the strongest study tier 0.8 or higher with confidence at least 0.7). A claim with
+studies on both sides, or with only a single or weak refutation, is `contested`.
 
 `refuting_pmids` and `top_refuting_tier` collect every study that refuted any claim, regardless of
 how that claim was finally scored, so a `contested` claim still contributes its refuting studies

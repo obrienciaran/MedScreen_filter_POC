@@ -22,20 +22,35 @@ def _cand(ext_id: str, pub_types: list[str]) -> Candidate:
     return Candidate(source="pubmed", ext_id=ext_id, pub_types=pub_types)
 
 
-def test_high_tier_refutation_is_refuted_and_dropped():
+def test_two_high_tier_refutations_are_refuted_and_dropped():
+    # Two independent high-tier refutations clear every floor, including the corroboration
+    # floor, so the claim is dropped.
+    claim = _claim()
+    cands = [_cand("R1", ["Randomized Controlled Trial"]), _cand("R2", ["Meta-Analysis"])]
+    labels = [
+        StanceLabel(claim_id=claim.claim_id, candidate_ext_id="R1", stance=Stance.REFUTES, confidence=0.9),
+        StanceLabel(claim_id=claim.claim_id, candidate_ext_id="R2", stance=Stance.REFUTES, confidence=0.9),
+    ]
+    cv = score_claim(claim, cands, labels)
+    assert cv.verdict is Verdict.REFUTED
+    assert cv.score < 0.4
+
+    pv = score_paper(PaperRecord(pmid="1", title="t"), [cv])
+    assert pv.verdict is Verdict.REFUTED
+    assert pv.action is Action.DROP
+    assert set(pv.refuting_pmids) == {"R1", "R2"}
+
+
+def test_single_high_tier_refutation_downweights_not_drops():
+    # One strong refutation with nothing corroborating it down-weights rather than drops, so a
+    # single study refuting one claim of a many-claim paper cannot drop the whole paper.
     claim = _claim()
     cands = [_cand("R", ["Randomized Controlled Trial"])]
     labels = [StanceLabel(claim_id=claim.claim_id, candidate_ext_id="R",
                           stance=Stance.REFUTES, confidence=0.9)]
     cv = score_claim(claim, cands, labels)
-    assert cv.verdict is Verdict.REFUTED
-    assert cv.score < 0.4
-    assert cv.refuting_pmids == ["R"]
-
-    pv = score_paper(PaperRecord(pmid="1", title="t"), [cv])
-    assert pv.verdict is Verdict.REFUTED
-    assert pv.action is Action.DROP
-    assert pv.refuting_pmids == ["R"]
+    assert cv.verdict is Verdict.CONTESTED
+    assert score_paper(PaperRecord(pmid="1"), [cv]).action is Action.DOWNWEIGHT
 
 
 def test_low_tier_refutation_downweights_not_drops():
@@ -143,16 +158,6 @@ def test_corroborating_refuters_strengthen_the_score():
     assert two.score < one.score
 
 
-def test_single_strong_refuter_still_drops_alone():
-    # Corroboration must not be a prerequisite for a drop: one landmark RCT refutes on its own.
-    claim = _claim()
-    cv = score_claim(
-        claim, [_cand("R", ["Randomized Controlled Trial"])],
-        [StanceLabel(claim_id=claim.claim_id, candidate_ext_id="R", stance=Stance.REFUTES, confidence=0.9)],
-    )
-    assert cv.verdict is Verdict.REFUTED
-
-
 def test_volume_of_low_tier_refuters_does_not_force_a_drop():
     # Many confident observational studies aggregate in strength but never clear the tier floor,
     # so weak evidence in bulk still contests rather than drops.
@@ -172,8 +177,12 @@ def test_paper_judged_by_most_damning_claim():
         [StanceLabel(claim_id="1#c0", candidate_ext_id="S", stance=Stance.SUPPORTS, confidence=0.9)],
     )
     bad = score_claim(
-        _claim(), [_cand("R", ["Randomized Controlled Trial"])],
-        [StanceLabel(claim_id="1#c0", candidate_ext_id="R", stance=Stance.REFUTES, confidence=0.9)],
+        _claim(),
+        [_cand("R1", ["Randomized Controlled Trial"]), _cand("R2", ["Meta-Analysis"])],
+        [
+            StanceLabel(claim_id="1#c0", candidate_ext_id="R1", stance=Stance.REFUTES, confidence=0.9),
+            StanceLabel(claim_id="1#c0", candidate_ext_id="R2", stance=Stance.REFUTES, confidence=0.9),
+        ],
     )
     pv = score_paper(PaperRecord(pmid="1"), [good, bad])
     assert pv.verdict is Verdict.REFUTED

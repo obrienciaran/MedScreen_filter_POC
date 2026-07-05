@@ -17,6 +17,9 @@ reports/filter.html
 reports/graph.html
 reports/recall-*.csv
 reports/recall-*.md
+reports/representative_large.csv
+reports/representative_large.html
+reports/representative_large_audit.md
 
 # Local env/secrets
 .env

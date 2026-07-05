@@ -24,16 +24,20 @@ from ..schema import (
     Verdict,
 )
 
-# A claim is REFUTED (which drops the paper) only when the strongest refutation clears all
-# three floors at once, so a DROP is reserved for unambiguous, high-tier, high-confidence
-# contradiction. Anything weaker (a low-tier refutation, an unsure judge, or a strength below
-# the bar) falls back to CONTESTED, which down-weights rather than drops. This optimises for
-# precision on the destructive action: we would rather down-weight a bad paper than drop a
-# good one. The floors are separate on purpose (rather than one combined strength) so a very
-# confident judgement on a weak study cannot substitute for a strong study, or vice versa.
+# A claim is REFUTED (which drops the paper) only when the strongest refutation clears three
+# floors at once AND at least two separate studies refute it, so a DROP is reserved for
+# unambiguous, high-tier, high-confidence, corroborated contradiction. Anything weaker (a low-tier
+# refutation, an unsure judge, a strength below the bar, or a lone refuter with nothing backing
+# it) falls back to CONTESTED, which down-weights rather than drops. This optimises for precision
+# on the destructive action: we would rather down-weight a bad paper than drop a good one. The
+# corroboration floor exists because a single study refuting one claim of a many-claim paper was
+# the main source of false drops (one extraction or stance error was enough to drop the paper).
+# The floors are separate on purpose (rather than one combined strength) so a very confident
+# judgement on a weak study cannot substitute for a strong study, or vice versa.
 DROP_MIN_STRENGTH = 0.6  # aggregate refuting strength (see _aggregate_strength)
 DROP_MIN_TIER = 0.8  # the single strongest refuting study must be an RCT or higher
 DROP_MIN_CONFIDENCE = 0.7  # stance judge must be confident in that strongest refutation
+DROP_MIN_REFUTERS = 2  # a drop needs corroboration, not a single study
 
 # How much a consistent body of evidence counts beyond its single strongest study. Judging a
 # claim by one study alone is fragile: a lone mis-tiered or mis-judged study swings the verdict,
@@ -87,7 +91,7 @@ def score_claim(
 
     score = _clamp(0.5 + 0.4 * support_strength - 0.8 * refute_strength)
     verdict = _claim_verdict(
-        len(labels), top_refuter is not None, bool(supporting),
+        len(labels), len(refuting), bool(supporting),
         refute_strength, refuting_tier, refuting_confidence,
     )
 
@@ -103,17 +107,18 @@ def score_claim(
 
 def _claim_verdict(
     n_evidence: int,
-    has_refute: bool,
+    n_refuters: int,
     has_support: bool,
     refute_strength: float,
     refuting_tier: float,
     refuting_confidence: float,
 ) -> Verdict:
-    if has_refute and has_support:
+    if n_refuters and has_support:
         return Verdict.CONTESTED  # evidence on both sides is ambiguous, never a drop
-    if has_refute:
+    if n_refuters:
         unambiguous = (
-            refute_strength >= DROP_MIN_STRENGTH
+            n_refuters >= DROP_MIN_REFUTERS
+            and refute_strength >= DROP_MIN_STRENGTH
             and refuting_tier >= DROP_MIN_TIER
             and refuting_confidence >= DROP_MIN_CONFIDENCE
         )
