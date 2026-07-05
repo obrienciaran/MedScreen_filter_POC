@@ -7,11 +7,19 @@ so the run reflects how the filter behaves on typical input (mostly kept).
 
 Uses NCBI E-utilities. No LLM and no API key needed. Set NCBI_EMAIL for politeness, and
 MEDSCREEN_INSECURE_TLS=1 / MEDSCREEN_CA_BUNDLE behind a TLS-terminating proxy.
-Run: python scripts/fetch_representative_xml.py
+
+    python scripts/fetch_representative_xml.py                     # canonical 10-paper sample
+    python scripts/fetch_representative_xml.py --target 80 --per-topic 2 \
+        --out-dir data/representative_large                        # larger presumed-keep set
+
+Scaling the set up lets the over-flag rate (how often the filter down-weights or drops an
+ordinary paper it should keep) be measured on more than ten papers. Pair it with
+scripts/flag_audit.py to summarise the run and list the flagged papers to inspect.
 """
 
 from __future__ import annotations
 
+import argparse
 import os
 import ssl
 import time
@@ -21,9 +29,13 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
-OUT_DIR = Path("data/representative")
+DEFAULT_OUT_DIR = Path("data/representative")
 
-# One ordinary recent paper per clinical area, for a representative spread.
+# Ordinary recent papers across common clinical areas, for a representative "presumed-keep"
+# spread. The default run takes one paper per topic and stops at the first ``--target``; a
+# larger set is reached by raising ``--per-topic`` and ``--target``, which is why the pool is
+# long. The first ten topics reproduce the original canonical sample, so the default run is
+# unchanged.
 _NOT_RETRACTED = 'NOT "Retracted Publication"[pt] NOT "Retraction of Publication"[pt]'
 TOPICS = [
     "type 2 diabetes",
@@ -36,8 +48,37 @@ TOPICS = [
     "chronic kidney disease",
     "chronic obstructive pulmonary disease",
     "Alzheimer disease",
+    "heart failure",
+    "atrial fibrillation",
+    "coronary artery disease",
+    "obesity",
+    "osteoarthritis",
+    "osteoporosis",
+    "migraine",
+    "epilepsy",
+    "Parkinson disease",
+    "multiple sclerosis",
+    "inflammatory bowel disease",
+    "chronic hepatitis",
+    "HIV infection",
+    "tuberculosis",
+    "sepsis",
+    "community-acquired pneumonia",
+    "colorectal cancer",
+    "prostate cancer",
+    "lung cancer",
+    "melanoma",
+    "generalized anxiety disorder",
+    "schizophrenia",
+    "psoriasis",
+    "atopic dermatitis",
+    "gout",
+    "iron deficiency anemia",
+    "hypothyroidism",
+    "glaucoma",
+    "benign prostatic hyperplasia",
+    "venous thromboembolism",
 ]
-TARGET = 10
 
 
 def _ssl_context() -> ssl.SSLContext | None:
@@ -82,48 +123,82 @@ def efetch(pmids: list[str]) -> str:
     return _get(f"{EUTILS}/efetch.fcgi", {"db": "pubmed", "id": ",".join(pmids), "retmode": "xml"})
 
 
-def main() -> None:
+def collect_pmids(
+    topics: list[str], *, per_topic: int, target: int, start_year: int, end_year: int, retmax: int
+) -> list[str]:
+    """Gather up to ``target`` unique ordinary-paper PMIDs, at most ``per_topic`` per topic."""
     pmids: list[str] = []
     seen: set[str] = set()
-    for topic in TOPICS:
-        if len(pmids) >= TARGET:
+    for topic in topics:
+        if len(pmids) >= target:
             break
-        term = f'"{topic}" AND 2024:2025[dp] AND hasabstract AND "Journal Article"[pt] {_NOT_RETRACTED}'
+        term = (f'"{topic}" AND {start_year}:{end_year}[dp] AND hasabstract '
+                f'AND "Journal Article"[pt] {_NOT_RETRACTED}')
         try:
-            hits = esearch(term, 5)
+            hits = esearch(term, retmax)
         except Exception as exc:  # noqa: BLE001 - trial script, report and continue
             print(f"WARN esearch failed for [{topic}]: {exc}")
             continue
+        taken = 0
         for pmid in hits:
+            if len(pmids) >= target or taken >= per_topic:
+                break
             if pmid not in seen:
                 seen.add(pmid)
                 pmids.append(pmid)
+                taken += 1
                 print(f"topic [{topic}] -> {pmid}")
-                break
         time.sleep(0.5)
+    return pmids[:target]
 
-    pmids = pmids[:TARGET]
-    print(f"Fetching {len(pmids)} papers: {pmids}")
-    xml_text = efetch(pmids)
-    root = ET.fromstring(xml_text)
 
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
+def write_papers(pmids: list[str], out_dir: Path) -> int:
+    """Fetch and write one PubmedArticleSet XML file per PMID. Returns the count written.
+
+    efetch is batched because a few hundred ids share one request URL and overflow it.
+    """
+    out_dir.mkdir(parents=True, exist_ok=True)
     written = 0
-    for art in root.findall(".//PubmedArticle"):
-        pmid_el = art.find(".//MedlineCitation/PMID")
-        if pmid_el is None or not pmid_el.text:
-            continue
-        pmid = pmid_el.text
-        title_el = art.find(".//Article/ArticleTitle")
-        title = (title_el.text or "").strip() if title_el is not None else ""
-        pub_types = [el.text for el in art.findall(".//PublicationType") if el.text]
-        wrapper = ET.Element("PubmedArticleSet")
-        wrapper.append(art)
-        (OUT_DIR / f"{pmid}.xml").write_bytes(ET.tostring(wrapper, encoding="utf-8", xml_declaration=True))
-        written += 1
-        print(f"  {pmid}: {title[:70]!r} | types={pub_types}")
+    for start in range(0, len(pmids), 100):
+        batch = pmids[start:start + 100]
+        root = ET.fromstring(efetch(batch))
+        for art in root.findall(".//PubmedArticle"):
+            pmid_el = art.find(".//MedlineCitation/PMID")
+            if pmid_el is None or not pmid_el.text:
+                continue
+            pmid = pmid_el.text
+            title_el = art.find(".//Article/ArticleTitle")
+            title = (title_el.text or "").strip() if title_el is not None else ""
+            pub_types = [el.text for el in art.findall(".//PublicationType") if el.text]
+            wrapper = ET.Element("PubmedArticleSet")
+            wrapper.append(art)
+            (out_dir / f"{pmid}.xml").write_bytes(
+                ET.tostring(wrapper, encoding="utf-8", xml_declaration=True)
+            )
+            written += 1
+            print(f"  {pmid}: {title[:70]!r} | types={pub_types}")
+        time.sleep(0.5)
+    return written
 
-    print(f"Wrote {written} XML files to {OUT_DIR}/")
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description="Fetch ordinary recent PubMed papers as XML.")
+    ap.add_argument("--target", type=int, default=10, help="total papers to fetch")
+    ap.add_argument("--per-topic", type=int, default=1, help="max papers taken per topic")
+    ap.add_argument("--start-year", type=int, default=2024)
+    ap.add_argument("--end-year", type=int, default=2025)
+    ap.add_argument("--retmax", type=int, default=5, help="candidates considered per topic")
+    ap.add_argument("--out-dir", default=str(DEFAULT_OUT_DIR))
+    args = ap.parse_args()
+
+    out_dir = Path(args.out_dir)
+    pmids = collect_pmids(
+        TOPICS, per_topic=args.per_topic, target=args.target,
+        start_year=args.start_year, end_year=args.end_year, retmax=args.retmax,
+    )
+    print(f"Fetching {len(pmids)} papers: {pmids}")
+    written = write_papers(pmids, out_dir)
+    print(f"Wrote {written} XML files to {out_dir}/")
 
 
 if __name__ == "__main__":
