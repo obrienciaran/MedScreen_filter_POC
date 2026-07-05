@@ -46,7 +46,7 @@ def parse_pubmed_xml(xml_text: str) -> list[PaperRecord]:
                 year=medline.year(art),
                 journal=medline.text(art, ".//Journal/Title"),
                 doi=medline.doi(art),
-                comments_corrections=_corrections(art),
+                comments_corrections=medline.comments_corrections(art),
             )
         )
     return out
@@ -87,14 +87,3 @@ def _mesh(art: ET.Element) -> list[str]:
         for el in art.findall(".//MeshHeadingList/MeshHeading/DescriptorName")
         if el.text
     ]
-
-
-def _corrections(art: ET.Element) -> dict[str, list[str]]:
-    """Group CommentsCorrectionsList referenced PMIDs by RefType."""
-    grouped: dict[str, list[str]] = {}
-    for cc in art.findall(".//CommentsCorrectionsList/CommentsCorrections"):
-        ref_type = cc.get("RefType", "")
-        ref_pmid = medline.text(cc, "PMID")
-        if ref_type and ref_pmid:
-            grouped.setdefault(ref_type, []).append(ref_pmid)
-    return grouped

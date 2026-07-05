@@ -66,8 +66,3 @@ def test_europepmc_queries_nonempty_and_unique():
     assert qs and all(qs)
     assert len(qs) == len(set(qs))
     assert any("PUB_TYPE" in q for q in qs)
-
-
-def test_as_query_terms_drops_missing_fields():
-    c = NormalizedClaim(intervention="aspirin", outcome="stroke")
-    assert c.as_query_terms() == ["aspirin", "stroke"]

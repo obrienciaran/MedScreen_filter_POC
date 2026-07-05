@@ -18,7 +18,7 @@ import os
 
 from ..base.extractor import ClaimExtractor
 from ..base.llm import LLMClient
-from ..llm import PROVIDERS, get_llm
+from ..llm import get_llm_for_backend
 from ..schema import ExtractedClaim, NormalizedClaim, PaperRecord
 
 
@@ -104,5 +104,4 @@ def get_extractor() -> ClaimExtractor:
     backend = os.environ.get("MEDSCREEN_EXTRACT_BACKEND", "stub").lower()
     if backend == "stub":
         return StubExtractor()
-    provider = backend if backend in PROVIDERS else None
-    return LLMExtractor(get_llm(provider))
+    return LLMExtractor(get_llm_for_backend(backend))

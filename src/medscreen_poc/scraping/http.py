@@ -91,6 +91,10 @@ def get_with_retry(
     PubMed and Europe PMC both answer a burst with 429 or a transient 5xx gateway error, so
     back off and retry rather than abort a long run. Any other status raises via
     ``raise_for_status``. Shared by both sources so the backoff policy lives in one place.
+
+    The backoff is a fixed exponential schedule and does not read a ``Retry-After`` header; the
+    rate limiter already keeps the request rate under each provider's published ceiling, so a
+    429 here is rare and the schedule is enough.
     """
     delay = 1.0
     for attempt in range(attempts):

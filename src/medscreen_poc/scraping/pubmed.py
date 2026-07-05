@@ -162,15 +162,5 @@ def _parse_corrections(art: ET.Element) -> tuple[list[str], list[str]]:
       * RetractionIn means this article is retracted by the referenced PMID.
       * RetractionOf means this article is a retraction of the referenced PMID.
     """
-    retracted_by: list[str] = []
-    is_retraction_of: list[str] = []
-    for cc in art.findall(".//CommentsCorrectionsList/CommentsCorrections"):
-        ref_type = cc.get("RefType", "")
-        ref_pmid = medline.text(cc, "PMID")
-        if not ref_pmid:
-            continue
-        if ref_type == "RetractionIn":
-            retracted_by.append(ref_pmid)
-        elif ref_type == "RetractionOf":
-            is_retraction_of.append(ref_pmid)
-    return retracted_by, is_retraction_of
+    grouped = medline.comments_corrections(art)
+    return grouped.get("RetractionIn", []), grouped.get("RetractionOf", [])

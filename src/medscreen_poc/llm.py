@@ -91,15 +91,22 @@ class GeminiLLM:
         self._client = genai.Client()
 
     def complete(self, prompt: str, *, max_tokens: int = 512) -> str:
+        # Cap the response length like the other providers do, so max_tokens means the same
+        # thing regardless of which backend is selected.
+        from google.genai import types  # lazy import
+
         # The free tier rate-limits (429 / RESOURCE_EXHAUSTED) and the shared model can be
         # transiently overloaded (503 UNAVAILABLE, 500/502/504). Both are temporary, so back
         # off and retry rather than crash a long batch run; other errors are re-raised.
         transient = ("429", "resource_exhausted", "rate limit", "503", "unavailable",
                     "overloaded", "high demand", "500", "internal", "502", "504")
+        config = types.GenerateContentConfig(max_output_tokens=max_tokens)
         delay = 4.0
         for attempt in range(7):
             try:
-                resp = self._client.models.generate_content(model=self.model, contents=prompt)
+                resp = self._client.models.generate_content(
+                    model=self.model, contents=prompt, config=config
+                )
                 return resp.text or ""
             except Exception as exc:  # noqa: BLE001 - inspect message to classify transient errors
                 msg = str(exc).lower()
@@ -124,3 +131,14 @@ def get_llm(provider: str | None = None) -> LLMClient:
     if provider == "gemini":
         return GeminiLLM(model)
     raise ValueError(f"Unknown MEDSCREEN_LLM_PROVIDER: {provider}")
+
+
+def get_llm_for_backend(backend: str) -> LLMClient:
+    """Resolve a non-stub extract/stance backend value to an LLM client.
+
+    ``"llm"`` defers to ``MEDSCREEN_LLM_PROVIDER``; a provider name (anthropic, openai,
+    gemini) pins that provider directly. Shared by the extract and stance backends so the
+    "backend string to provider" rule lives in one place.
+    """
+    provider = backend if backend in PROVIDERS else None
+    return get_llm(provider)

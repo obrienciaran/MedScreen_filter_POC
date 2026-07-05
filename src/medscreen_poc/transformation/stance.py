@@ -22,8 +22,16 @@ from concurrent.futures import ThreadPoolExecutor
 
 from ..base.llm import LLMClient
 from ..base.stance import StanceBackend
-from ..llm import PROVIDERS, get_llm
+from ..llm import get_llm_for_backend
 from ..schema import Candidate, GoldEntry, Stance, StanceLabel
+
+def _as_float(value: object, default: float) -> float:
+    """Coerce a model-supplied value to float, falling back when it is missing or not numeric."""
+    try:
+        return float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return default
+
 
 # Lexical cues used only by the stub backend.
 _REFUTE_CUES = (
@@ -103,17 +111,25 @@ class LLMStance:
 
     @staticmethod
     def _parse(claim_id: str, ext_id: str, text: str) -> StanceLabel:
+        data: dict = {}
+        stance = Stance.NEUTRAL
         try:
             start, end = text.index("{"), text.rindex("}") + 1
-            data = json.loads(text[start:end])
-            stance = Stance(data.get("stance", "neutral"))
+            parsed = json.loads(text[start:end])
+            # A well-formed response is a JSON object. Anything else (an array, a bare value)
+            # is treated as unparseable and falls back to neutral rather than crashing here.
+            if isinstance(parsed, dict):
+                data = parsed
+                stance = Stance(data.get("stance", "neutral"))
         except (ValueError, KeyError):
-            stance, data = Stance.NEUTRAL, {}
+            data, stance = {}, Stance.NEUTRAL
+        # A stray non-bool condition_match is dropped to None so it never fails model validation.
+        condition_match = data.get("condition_match")
         return StanceLabel(
             claim_id=claim_id, candidate_ext_id=ext_id, stance=stance,
-            confidence=float(data.get("confidence", 0.0)),
+            confidence=_as_float(data.get("confidence"), 0.0),
             rationale=str(data.get("rationale", "")),
-            condition_match=data.get("condition_match"),
+            condition_match=condition_match if isinstance(condition_match, bool) else None,
         )
 
 
@@ -121,8 +137,7 @@ def get_stance_backend() -> StanceBackend:
     backend = os.environ.get("MEDSCREEN_STANCE_BACKEND", "stub").lower()
     if backend == "stub":
         return StubStance()
-    provider = backend if backend in PROVIDERS else None
-    return LLMStance(get_llm(provider))
+    return LLMStance(get_llm_for_backend(backend))
 
 
 def classify_batch(

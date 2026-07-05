@@ -109,6 +109,18 @@ class Store:
         ).fetchone()
         return _row_to_candidate(row) if row else None
 
+    def get_candidates(self, ext_ids: list[str]) -> dict[str, Candidate]:
+        """Fetch many candidates in one query, keyed by ext_id (missing ids are absent)."""
+        if not ext_ids:
+            return {}
+        placeholders = ",".join("?" * len(ext_ids))
+        rows = self.con.execute(
+            "SELECT ext_id, source, doi, title, abstract, pub_types, year, "
+            f"retracted_by, is_retraction_of FROM candidates WHERE ext_id IN ({placeholders})",
+            list(ext_ids),
+        ).fetchall()
+        return {r[0]: _row_to_candidate(r) for r in rows}
+
     def has_candidate(self, ext_id: str) -> bool:
         return self.con.execute(
             "SELECT 1 FROM candidates WHERE ext_id = ?", [ext_id]

@@ -62,15 +62,6 @@ class NormalizedClaim(BaseModel):
     comparator: str | None = None
     direction: Literal["increases", "decreases", "no_effect", "causes", "prevents"] | None = None
 
-    def as_query_terms(self) -> list[str]:
-        """Salient terms for building a literature query."""
-        terms = [self.intervention, self.outcome]
-        if self.population:
-            terms.append(self.population)
-        if self.comparator:
-            terms.append(self.comparator)
-        return [t for t in terms if t]
-
 
 class GoldEntry(BaseModel):
     """One hand-authored ground-truth claim."""

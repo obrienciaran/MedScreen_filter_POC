@@ -65,8 +65,8 @@ def retrieve_pool(
     if use_cache:
         cached_ids = store.get_retrieval(gold.id, "pool")
         if cached_ids:
-            pool = [store.get_candidate(i) for i in cached_ids]
-            return [c for c in pool if c is not None]
+            by_id = store.get_candidates(cached_ids)
+            return [by_id[i] for i in cached_ids if i in by_id]
 
     sources = sources if sources is not None else get_sources()
     by_id: dict[str, Candidate] = {}
@@ -100,10 +100,29 @@ def _merge(by_id: dict[str, Candidate], c: Candidate, channel: str) -> None:
     if existing is None:
         c.retrieved_by = sorted(set(c.retrieved_by) | {channel})
         by_id[c.ext_id] = c
-    else:
-        existing.retrieved_by = sorted(set(existing.retrieved_by) | {channel})
-        if not existing.abstract and c.abstract:
-            existing.abstract = c.abstract
+        return
+    existing.retrieved_by = sorted(set(existing.retrieved_by) | {channel})
+    # Enrich from the second source rather than discarding it. The two providers report the
+    # same study with different completeness, so union the publication types (they drive
+    # evidence_tier and the tier-inversion bucket) and fill any field the first source left
+    # empty. Without this the first provider to insert an ext_id would lock in a poorer record.
+    existing.pub_types = _union_preserving(existing.pub_types, c.pub_types)
+    existing.retracted_by = _union_preserving(existing.retracted_by, c.retracted_by)
+    existing.is_retraction_of = _union_preserving(existing.is_retraction_of, c.is_retraction_of)
+    if not existing.abstract and c.abstract:
+        existing.abstract = c.abstract
+    if not existing.title and c.title:
+        existing.title = c.title
+    if existing.year is None and c.year is not None:
+        existing.year = c.year
+    if not existing.doi and c.doi:
+        existing.doi = c.doi
+
+
+def _union_preserving(first: list[str], second: list[str]) -> list[str]:
+    """Union two string lists, keeping ``first``'s order and appending new, case-insensitive."""
+    seen = {s.lower() for s in first}
+    return first + [s for s in second if s.lower() not in seen]
 
 
 def embed_pool(
@@ -111,16 +130,23 @@ def embed_pool(
 ) -> list[tuple[str, float]]:
     """Embed the claim and pool, then return the pool ranked by cosine to the claim."""
     claim_vec = embedder.embed([_claim_text(gold)])[0]
-    ranked_pool: list[tuple[str, list[float]]] = []
-    to_embed = [c for c in pool if store.get_embedding(c.ext_id, embedder.name) is None]
+    # Read each cached vector once, then keep the freshly computed ones in memory, so a pool of
+    # N candidates costs N reads rather than 2N (one pass to decide what to embed, another to
+    # gather the vectors for ranking).
+    vec_by_id: dict[str, list[float]] = {}
+    to_embed: list[Candidate] = []
+    for c in pool:
+        cached = store.get_embedding(c.ext_id, embedder.name)
+        if cached is None:
+            to_embed.append(c)
+        else:
+            vec_by_id[c.ext_id] = cached
     if to_embed:
         vecs = embedder.embed([f"{c.title} {c.abstract}" for c in to_embed])
         for c, v in zip(to_embed, vecs):
             store.upsert_embedding(c.ext_id, embedder.name, v)
-    for c in pool:
-        v = store.get_embedding(c.ext_id, embedder.name)
-        if v is not None:
-            ranked_pool.append((c.ext_id, v))
+            vec_by_id[c.ext_id] = v
+    ranked_pool = [(c.ext_id, vec_by_id[c.ext_id]) for c in pool if c.ext_id in vec_by_id]
     ranked = semantic.rank_by_similarity(claim_vec, ranked_pool)
     store.record_retrieval(gold.id, f"semantic:{embedder.name}", ranked)
     return ranked

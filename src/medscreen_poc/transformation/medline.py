@@ -18,6 +18,12 @@ def text(node: ET.Element, path: str) -> str | None:
 
 
 def abstract(art: ET.Element) -> str:
+    """Join the abstract's text into one string.
+
+    A structured abstract splits into several ``AbstractText`` sections each carrying a
+    ``Label`` (BACKGROUND, METHODS, RESULTS, CONCLUSIONS). Those labels are dropped on purpose:
+    the downstream stance and extract steps read the prose, not the section headers.
+    """
     return " ".join(
         (el.text or "").strip() for el in art.findall(".//Abstract/AbstractText")
     ).strip()
@@ -49,3 +55,19 @@ def doi(art: ET.Element) -> str | None:
         if el.get("EIdType") == "doi" and el.text:
             return el.text.strip()
     return None
+
+
+def comments_corrections(art: ET.Element) -> dict[str, list[str]]:
+    """Group CommentsCorrectionsList referenced PMIDs by RefType.
+
+    The shared leaf for both parsers: the ingester keeps the full grouping (every RefType),
+    while the efetch parser picks out the retraction relationships. Kept here so the two
+    cannot drift in how they read the same element.
+    """
+    grouped: dict[str, list[str]] = {}
+    for cc in art.findall(".//CommentsCorrectionsList/CommentsCorrections"):
+        ref_type = cc.get("RefType", "")
+        ref_pmid = text(cc, "PMID")
+        if ref_type and ref_pmid:
+            grouped.setdefault(ref_type, []).append(ref_pmid)
+    return grouped

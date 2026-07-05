@@ -10,6 +10,11 @@ Behind the ``Retriever`` Protocol (see ``base.retriever``):
 
 The pool is per paper and claim. The stub returns the same paper-level links for each
 claim because it has no claim-level signal offline.
+
+Note on the RetractionIn handling below: when driven by ``orchestration.pipeline``, a formally
+retracted paper is short-circuited before retrieval is ever called (see ``_retraction_signal``
+there), so that path never reaches a retriever. The RetractionIn handling is kept so a retriever
+is still correct when used on its own, independent of that upstream fast path.
 """
 
 from __future__ import annotations
