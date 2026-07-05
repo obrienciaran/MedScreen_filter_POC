@@ -86,7 +86,7 @@ def run_paper(
         labels = classify_batch(
             stance_backend, claim.as_gold_entry(), candidates, executor=stance_executor
         )
-        claim_verdicts.append(score_claim(claim, candidates, labels, paper_year=paper.year))
+        claim_verdicts.append(score_claim(claim, candidates, labels))
     return score_paper(paper, claim_verdicts)
 
 

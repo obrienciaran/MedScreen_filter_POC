@@ -250,10 +250,6 @@ class ClaimVerdict(BaseModel):
     score: float  # 0 (refuted) .. 1 (well supported)
     refuting_confidence: float = 0.0  # stance confidence of the strongest refuter, 0 if none
     refuting_year: int | None = None  # publication year of the strongest refuter, if known
-    # True when the claim is not refuted, but newer higher-tier evidence on the same claim has
-    # appeared that does not support it (superseded, not contradicted). It cannot drop a paper;
-    # it only pulls an otherwise supported/neutral claim down to contested.
-    superseded: bool = False
     refuting_pmids: list[str] = Field(default_factory=list)
     supporting_pmids: list[str] = Field(default_factory=list)
 
@@ -283,10 +279,6 @@ class PaperVerdict(BaseModel):
     # the paper is ungrounded (no corroboration retrieved), which is its own signal and must
     # not be silently kept.
     grounded: bool = True
-    # True when at least one claim is superseded: newer higher-tier evidence has appeared that
-    # does not support it, so the paper is outdated though not refuted. Drives a down-weight, not
-    # a drop.
-    superseded: bool = False
     refuting_pmids: list[str] = Field(default_factory=list)
     claim_verdicts: list[ClaimVerdict] = Field(default_factory=list)
     notes: str = ""

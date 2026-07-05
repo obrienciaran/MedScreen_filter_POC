@@ -75,14 +75,9 @@ retrieved evidence, and gated by strict drop thresholds.
    both sides, is `contested` rather than `refuted`. This reserves the destructive action for
    high-precision cases (thresholds in `scoring.py`).
 
-   One extra case is folded in here: a claim that is *superseded but not contradicted*. When a
-   claim is not refuted, yet a newer study of tier ≥ 0.85 (meta-analysis, systematic review, or
-   guideline) published after the paper is judged neutral toward it, the evidence base has moved
-   past the paper even though nothing overturned it. Such a claim is pulled down from `supported`
-   or `neutral` to `contested` (down-weight), never to `refuted`, and the paper's `superseded`
-   flag is set. The bar is deliberately high (newer AND high-tier AND neutral) so ordinary
-   corroborated papers are not swept up; supersession needs the paper's publication year, so it
-   is skipped when that is missing.
+   A paper that was correct when written and later superseded by newer work, but never actually
+   contradicted, is kept on purpose. Science is incremental, and a once-true paper is not false;
+   only a genuine refutation (subsequent evidence that contradicts the claim) moves it off `keep`.
 3. Roll up to the paper by its most damning claim: lowest score, worst verdict. `refuted` drops
    the paper, `contested` down-weights it, `supported` and `neutral` keep it, `ungrounded` flags
    it for review. Neutral is kept on purpose, since a missing refutation is not proof a claim is

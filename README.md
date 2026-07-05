@@ -31,7 +31,6 @@ The columns in the screenshot:
 | `verdict_basis` | What the verdict rests on: `retraction` (a formal retraction link in the paper's own record), `evidence` (retrieved literature), or `none`. |
 | `refutation_timing` | Whether the refuting evidence came `prior` to the paper, `subsequent` to it (the reversal pattern), or `unknown`. |
 | `grounded` | `true` if any supporting evidence was found for the paper's claims, else `false`. |
-| `superseded` | `true` if newer higher-tier evidence has appeared that does not support a claim (outdated but not refuted); it down-weights the paper, never drops it. |
 | `n_claims` | How many claims were extracted from the paper. |
 | `n_refuted_claims` | How many claims were decisively refuted (verdict `refuted`). |
 | `top_refuting_tier` | Evidence tier (`0.00`–`1.00`) of the strongest study that refutes any claim; `0.00` if none. |
