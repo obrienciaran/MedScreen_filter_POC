@@ -29,13 +29,25 @@ Embeddings (`transformation/semantic.py`) are used only to re-rank an already-fe
 validation (`recall@k`); they cannot recover a study the queries never returned. Whether the
 queries succeed is the central failure mode, and exactly what the validation measures.
 
+The stance judge then reads only each candidate's title and abstract, never its full text. This
+is a deliberate cost trade-off: abstracts are cheap to fetch and short to send to the model, but
+a refutation or a condition caveat that lives only in a paper's Results or Methods is invisible
+to it. It is a known ceiling on both stance recall and precision, accepted for the POC.
+
 > Status: proof of concept. Tested on 10 PubMed papers with Gemini 2.5 Flash Lite (6 kept, 4
 > downweighted, 0 dropped; all 10 got a real verdict). Not yet run on a large or varied dataset;
 > query construction, retrieval, and scoring all need refinement before production use.
 
 ## 📄 How a paper is scored
 
-Scoring is mechanical, not a model opinion. Thresholds live in `transformation/scoring.py`.
+Scoring is a mechanical aggregation of the stance model's per-study judgements, weighted by
+evidence tier, with fixed thresholds in `transformation/scoring.py`. The arithmetic and the
+keep/drop decision are deterministic and never call the model, but the inputs it combines (each
+study's stance label and the model's confidence in it) are model judgements, so the stance model
+is load-bearing for the *direction* of an evidence-based verdict even though it never makes the
+verdict itself. What the mechanical layer guarantees is that no single study's label decides a
+paper on its own: the label is weighted by the study's evidence tier, combined across the body of
+retrieved evidence, and gated by strict drop thresholds.
 
 0. Retraction fast path. If the paper's own XML shows it is formally retracted, either via a
    `RetractionIn` link or the `Retracted Publication` publication type, drop it immediately with
@@ -47,13 +59,20 @@ Scoring is mechanical, not a model opinion. Thresholds live in `transformation/s
 1. Weigh each study by its publication-type evidence tier (guideline 1.0, retraction 0.95,
    systematic review 0.9, meta-analysis 0.85, RCT 0.8, observational 0.5, case report 0.2, else
    0.4). Its pull on a claim is that tier × the model's stance confidence.
-2. Score the claim. Starting at 0.5, the strongest supporting pull raises the score and the
-   strongest refuting pull lowers it (refutation weighs about twice as much). Verdict is
-   `refuted`, `contested`, `supported`, or `unverified` (no usable evidence). A claim is
-   `refuted` only when the strongest refutation is unambiguous: strength (tier × confidence)
-   ≥ 0.6, refuting study tier ≥ 0.8 (RCT or higher), and stance confidence ≥ 0.7. Anything
-   weaker, or any case with evidence on both sides, is `contested` rather than `refuted`. This
-   reserves the destructive action for high-precision cases (thresholds in `scoring.py`).
+2. Score the claim. Starting at 0.5, aggregated supporting evidence raises the score and
+   aggregated refuting evidence lowers it (refutation weighs about twice as much). The aggregate
+   is not just the single strongest study: the strongest sets the floor (so a lone landmark trial
+   still carries full weight, as the WHI trial did for HRT), then each further agreeing study
+   closes a diminishing share of the remaining gap toward the maximum. This means a consistent
+   body of evidence counts for more than one study, while a pile-up of weak studies cannot
+   overpower a strong one (pulls already fold in evidence tier, so a case report adds little).
+   Verdict is `refuted`, `contested`, `supported`, or `unverified` (no usable evidence). A claim
+   is `refuted` only when the refutation is unambiguous: aggregate refuting strength ≥ 0.6, and
+   the single strongest refuting study is tier ≥ 0.8 (RCT or higher) with stance confidence
+   ≥ 0.7. Anchoring the tier and confidence floors on one genuinely high-quality study keeps
+   volume of low-tier evidence from forcing a drop. Anything weaker, or any case with evidence on
+   both sides, is `contested` rather than `refuted`. This reserves the destructive action for
+   high-precision cases (thresholds in `scoring.py`).
 3. Roll up to the paper by its most damning claim: lowest score, worst verdict. `refuted` drops
    the paper, `contested` down-weights it, `supported` and `unverified` keep it. Unverified is
    kept on purpose, since a missing refutation is not proof a claim is false.
@@ -69,8 +88,9 @@ accepted consensus. Both are written to the flat CSV alongside the continuous pe
 
 Expected, not a bug. Each claim is checked against several retrieved studies; some may refute it,
 others support it. A claim is `refuted` only when studies refute it, none support it, and the
-strongest refutation is unambiguous (tier × confidence ≥ 0.6, refuting tier ≥ 0.8, confidence
-≥ 0.7). A claim with studies on both sides, or with only a weak lone refutation, is `contested`.
+refutation is unambiguous (aggregate refuting strength ≥ 0.6, and the single strongest refuting
+study is tier ≥ 0.8 with confidence ≥ 0.7). A claim with studies on both sides, or with only a
+weak lone refutation, is `contested`.
 
 `refuting_pmids` and `top_refuting_tier` collect every study that refuted any claim, regardless of
 how that claim was finally scored, so a `contested` claim still contributes its refuting studies

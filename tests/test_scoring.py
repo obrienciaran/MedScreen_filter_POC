@@ -124,6 +124,48 @@ def test_refutation_timing_prior_vs_subsequent():
     assert score_paper(PaperRecord(pmid="1"), [cv]).refutation_timing == "unknown"
 
 
+def test_corroborating_refuters_strengthen_the_score():
+    # Two agreeing refuters push the score lower (a stronger refutation) than one alone, so a
+    # consistent body of evidence counts for more than a single study.
+    claim = _claim()
+    one = score_claim(
+        claim, [_cand("R1", ["Randomized Controlled Trial"])],
+        [StanceLabel(claim_id=claim.claim_id, candidate_ext_id="R1", stance=Stance.REFUTES, confidence=0.7)],
+    )
+    two = score_claim(
+        claim,
+        [_cand("R1", ["Randomized Controlled Trial"]), _cand("R2", ["Randomized Controlled Trial"])],
+        [
+            StanceLabel(claim_id=claim.claim_id, candidate_ext_id="R1", stance=Stance.REFUTES, confidence=0.7),
+            StanceLabel(claim_id=claim.claim_id, candidate_ext_id="R2", stance=Stance.REFUTES, confidence=0.7),
+        ],
+    )
+    assert two.score < one.score
+
+
+def test_single_strong_refuter_still_drops_alone():
+    # Corroboration must not be a prerequisite for a drop: one landmark RCT refutes on its own.
+    claim = _claim()
+    cv = score_claim(
+        claim, [_cand("R", ["Randomized Controlled Trial"])],
+        [StanceLabel(claim_id=claim.claim_id, candidate_ext_id="R", stance=Stance.REFUTES, confidence=0.9)],
+    )
+    assert cv.verdict is Verdict.REFUTED
+
+
+def test_volume_of_low_tier_refuters_does_not_force_a_drop():
+    # Many confident observational studies aggregate in strength but never clear the tier floor,
+    # so weak evidence in bulk still contests rather than drops.
+    claim = _claim()
+    cands = [_cand(f"R{i}", ["Observational Study"]) for i in range(5)]
+    labels = [
+        StanceLabel(claim_id=claim.claim_id, candidate_ext_id=f"R{i}", stance=Stance.REFUTES, confidence=1.0)
+        for i in range(5)
+    ]
+    cv = score_claim(claim, cands, labels)
+    assert cv.verdict is Verdict.CONTESTED
+
+
 def test_paper_judged_by_most_damning_claim():
     good = score_claim(
         _claim(), [_cand("S", ["Meta-Analysis"])],

@@ -31,9 +31,19 @@ from ..schema import (
 # precision on the destructive action: we would rather down-weight a bad paper than drop a
 # good one. The floors are separate on purpose (rather than one combined strength) so a very
 # confident judgement on a weak study cannot substitute for a strong study, or vice versa.
-DROP_MIN_STRENGTH = 0.6  # tier x stance-confidence of the strongest refuter
-DROP_MIN_TIER = 0.8  # refuting study must be an RCT or higher
-DROP_MIN_CONFIDENCE = 0.7  # stance judge must be confident in the refutation
+DROP_MIN_STRENGTH = 0.6  # aggregate refuting strength (see _aggregate_strength)
+DROP_MIN_TIER = 0.8  # the single strongest refuting study must be an RCT or higher
+DROP_MIN_CONFIDENCE = 0.7  # stance judge must be confident in that strongest refutation
+
+# How much a consistent body of evidence counts beyond its single strongest study. Judging a
+# claim by one study alone is fragile: a lone mis-tiered or mis-judged study swings the verdict,
+# and genuine corroboration across several studies (which is how medical consensus actually
+# forms) is ignored. So refuting and supporting pulls are aggregated rather than reduced to a
+# single max. Each agreeing study beyond the strongest closes this fraction of the remaining gap
+# to 1.0, scaled by its own pull, so corroboration strengthens the verdict with diminishing
+# returns while no pile-up of weak studies can overpower one strong study. At 0.0 this collapses
+# back to the old single-strongest-pull behaviour.
+CORROBORATION_WEIGHT = 0.5
 
 # Default action per verdict. Unverified is kept, because a missing refutation when neutral
 # evidence *was* found is not proof of falsity. Ungrounded is different: no evidence was found
@@ -62,8 +72,11 @@ def score_claim(
 
     year_by_id = {c.ext_id: c.year for c in candidates}
     top_refuter = max(refuting, key=pull, default=None)
-    refute_strength = pull(top_refuter) if top_refuter else 0.0
-    support_strength = max((pull(l) for l in supporting), default=0.0)
+    # Aggregate the whole body of agreeing evidence, not just the single strongest study, so
+    # consistency and volume count (with diminishing returns). The strongest study still sets
+    # the floor, so a lone landmark trial refutes on its own.
+    refute_strength = _aggregate_strength([pull(l) for l in refuting])
+    support_strength = _aggregate_strength([pull(l) for l in supporting])
     top_refuting_tier = max((tier.get(l.candidate_ext_id, 0.4) for l in refuting), default=0.0)
     # Tier and confidence of the single strongest refuter, judged together against the DROP
     # floors below. Kept separate from top_refuting_tier, which is the max tier across all
@@ -164,6 +177,27 @@ def _paper_verdict(claim_verdicts: list[ClaimVerdict]) -> Verdict:
     if Verdict.SUPPORTED in verdicts:
         return Verdict.SUPPORTED
     return Verdict.UNVERIFIED
+
+
+def _aggregate_strength(pulls: list[float]) -> float:
+    """Combine the pulls of all studies on one side of a claim into a single strength in [0, 1].
+
+    The strongest study sets the floor, so a lone high-tier trial still carries full weight
+    (the WHI trial overturned HRT single-handedly). Each further agreeing study then closes
+    ``CORROBORATION_WEIGHT`` of the remaining gap to 1.0, scaled by its own pull, so a consistent
+    body of evidence is stronger than any one study while weak studies add little and can never
+    overpower a strong one. Pulls already fold in evidence tier, so a case report contributes
+    far less than an RCT.
+    """
+    if not pulls:
+        return 0.0
+    ordered = sorted(pulls, reverse=True)
+    # The strongest study enters at full weight, so a single study reproduces its own pull
+    # exactly and the aggregate never drops below the strongest single pull.
+    strength = ordered[0]
+    for p in ordered[1:]:
+        strength += p * (1.0 - strength) * CORROBORATION_WEIGHT
+    return min(strength, 1.0)
 
 
 def _clamp(x: float, lo: float = 0.0, hi: float = 1.0) -> float:

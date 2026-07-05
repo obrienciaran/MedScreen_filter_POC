@@ -70,17 +70,25 @@ not.
 
 ### Scoring (the filter's verdict)
 
-The filter's truthfulness scoring is mechanical and evidence-driven, not an LLM opinion. It
-runs per claim, then rolls up to the paper (`transformation/scoring.py`).
+The filter's truthfulness scoring is a mechanical aggregation of the stance judge's per-study
+labels, weighted by evidence tier, with fixed thresholds (`transformation/scoring.py`). The
+arithmetic and the keep/drop decision are deterministic and never call the model, but the labels
+and confidences it combines are model judgements, so the stance judge is load-bearing for the
+direction of an evidence-based verdict even though it never makes the verdict itself. It runs per
+claim, then rolls up to the paper.
 
 - Each retrieved study has an evidence tier from its publication type (guideline 1.0,
   retraction 0.95, systematic review 0.9, meta-analysis 0.85, RCT 0.8, observational 0.5,
   case report 0.2, anything else 0.4). A study's pull on a claim is its tier times the stance
-  judge's confidence.
-- A claim's 0 to 1 score starts at 0.5, rises with the strongest supporting pull, and falls with
-  the strongest refuting pull (refutation weighs roughly twice as much). Its verdict is
-  refuted (a strong high-tier refutation), contested (evidence both ways, or a weak
-  refutation), supported (support only), or unverified (no usable evidence).
+  judge's confidence. The stance judge reads only each study's title and abstract, not full text
+  (a deliberate cost trade-off).
+- A claim's 0 to 1 score starts at 0.5, rises with aggregated supporting evidence, and falls with
+  aggregated refuting evidence (refutation weighs roughly twice as much). The aggregate is not
+  just the single strongest study: the strongest sets the floor, then each further agreeing study
+  adds a diminishing share, so a consistent body of evidence counts for more than one study while
+  weak studies in bulk cannot overpower a strong one. Its verdict is refuted (a strong high-tier
+  refutation), contested (evidence both ways, or a weak refutation), supported (support only), or
+  unverified (no usable evidence).
 - A paper is judged by its most damning claim: its score is the lowest claim score and its
   verdict is the worst claim verdict. The verdict maps to an action: refuted drops the paper,
   contested down-weights it, supported or unverified keeps it. Unverified is kept on purpose,
