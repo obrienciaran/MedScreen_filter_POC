@@ -12,6 +12,20 @@ keep, down-weight, or drop papers based on that table.
 Rule-based filters and LLM raters judge a paper by how it reads, which is what confident
 misinformation imitates best. This filter checks each claim against retrieved evidence instead.
 
+Early testing with a lightweight LLM (Gemini 2.5 Flash Lite, POC only) shows evidence retrieval can underperform direct LLM judgment. 
+
+**Pros:**
+- Transparent: verdicts show which papers ground each decision
+- Temporal: catches reversals and retracted work via publication dates
+- Auditable: reasoning chain can be verified
+
+**Cons:**
+- Query precision: retrieval can be too broad and add noise
+- Stance judgment: LLM confidence decreases on real papers vs. synthetic test cases
+- Retraction signals: formal retractions may not be consistently retrieved or scored
+
+This is experimental code. Before production use, stance judgment and query precision require improvement.
+
 ## ➡️ What it produces
 
 Running the filter writes `reports/filter.csv`, one row per paper. The filter can also draw an
