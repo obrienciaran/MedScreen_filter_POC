@@ -1,0 +1,164 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{natbib}
+\usepackage[margin=1in]{geometry}
+
+\title{MedScreen: Evidence-Based Factuality Filtering of Medical Training Data}
+
+\author{Ciaran O'Brien}
+
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+
+Medical language models inherit the errors of the corpus they train on. A published paper can be fluent, well cited, and formally retracted, or state a claim that later evidence overturned, and a filter that judges papers by how they read will keep it. MedScreen is an evidence-based factuality filter for medical training data. It extracts the specific claims a PubMed paper makes, retrieves trusted studies that bear on each claim, judges whether that evidence supports or refutes it, and aggregates the result into a per-paper verdict and a recommended training action: keep, down-weight, drop, or flag for review. Because the filter is only as good as its retrieval, we validate that single dependency directly: on a gold slice of twenty consensus reversals whose disproving studies are known in advance, model-free retrieval recovers the disproving study for 90\% of cases (18 of 20). With a lightweight stance model (Gemini 2.5 Flash Lite), 85\% of retrieved reversals are recognised as refuting, and no true control paper is wrongly dropped despite a 25\% false-contradiction rate, because strict corroboration thresholds turn a mislabelled control into a reversible down-weight rather than a drop. The system judges factuality alone and never lets writing quality, journal prestige, or author reputation stand in for truth. We report where retrieval fails, why abstract-only stance judgment caps precision, and what a production version would need.
+
+\end{abstract}
+
+\section{Introduction}
+
+Language models trained on medical text reproduce what that text asserts. If the training corpus contains claims that are false, superseded, or drawn from retracted work, the model learns them and repeats them with confidence. Data quality therefore sets a ceiling on model trustworthiness, and for medical models the cost of a confidently wrong output is high.
+
+The usual ways of screening a corpus judge a paper by its surface. Rule-based filters key on formatting and vocabulary; learned quality raters score fluency and structure; citation and journal-prestige signals reward reputation. Confident medical misinformation imitates all of these well. A retracted paper reads like a sound one, a reversed claim was mainstream and heavily cited for years before the evidence turned, and neither is distinguishable from good work by surface features alone.
+
+MedScreen takes a different axis. It asks one question of each paper: are its claims factually correct given trusted scientific evidence. It answers by retrieving that evidence and checking the claims against it, rather than inferring truth from how the paper reads. This is deliberately a factuality filter and nothing else. It does not judge sample size, statistical rigour, reproducibility, writing quality, journal prestige, or author h-index, and it never lets those stand in for truth. Paper quality is assumed to be learned from the corpus itself; the filter's only job is to remove provably refuted claims and flag ungrounded ones.
+
+The central risk in this design is retrieval. If the study that contradicts a wrong claim is never retrieved, no later step can use it, and the paper passes. So alongside the filter we build a validation harness that measures exactly this dependency on claims the field already knows were reversed, where the disproving study is recorded in advance. The filter is the product; the harness is the scaffold that shows the product can work.
+
+This paper describes the filter, the retrieval and scoring it rests on, and the validation results from a proof-of-concept implementation. We report both what works (model-free retrieval recall of 90\%, zero wrongful drops of control papers) and where it does not (two retrieval misses on conceptual reversals, and a stance ceiling imposed by reading abstracts rather than full text).
+
+\section{Related Work}
+
+The closest methodological cousins decompose text into atomic claims and verify each against retrieved evidence. FActScore \citep{factscore2023} breaks a generation into atomic facts and scores each as supported or unsupported against a knowledge source. SAFE \citep{safe2024} extends this with a search-augmented evaluator that issues queries and rates each atomic fact against retrieved results. FEVER \citep{fever2018} established the retrieve-then-verify task and dataset for open-domain claims.
+
+All three apply the pipeline to model \emph{outputs}: they check what a system generated. MedScreen applies the same retrieve-then-verify decomposition to training \emph{inputs}, the published papers that make up a corpus, and adds two things suited to that setting. First, an evidence-tier weighting, so a randomised trial moves a verdict more than a case report. Second, a retrieval-recall validation harness anchored on known consensus reversals, which measures the one dependency the filter's accuracy rests on against ground truth.
+
+Reputation-based screening is the implicit alternative and the one MedScreen argues against. Citation count and journal prestige judge who is speaking, not whether they are right. The belief that hormone replacement therapy prevents coronary heart disease was heavily cited the entire time it was wrong, until the Women's Health Initiative trial \citep{whi2002} found the opposite.
+
+\section{Method}
+
+For each paper the filter runs five stages. An LLM is used in only two of them, claim extraction and stance judgment, and never runs retrieval or decides the keep or drop verdict. The whole pipeline also runs offline on deterministic stub backends so the control flow can be checked without a key or a network call.
+
+\subsection{Ingest}
+
+Input is PubMed/MEDLINE XML rather than plain text, because the XML carries the signals the filter relies on: the \texttt{CommentsCorrectionsList} retraction and comment links, the publication types that set evidence tiers, and the MeSH terms. The ingester parses each file into a structured record and skips, with an error, any file it cannot read or that is not a PubMed article set.
+
+\subsection{Claim extraction}
+
+An LLM lifts the paper's specific claims out of its text, keeping the conditions attached: population, comparator, dose, direction, and setting. Condition-stripped claims manufacture false verdicts, so retaining them is treated as an invariant rather than a nicety.
+
+\subsection{Evidence retrieval}
+
+For each claim the filter builds several keyword and boolean queries and sends them to the PubMed E-utilities and Europe PMC search endpoints, which return capped, relevance-ranked lists of study IDs. It unions those with any dispute links from the paper's own XML, then fetches each candidate's abstract and publication type. Evidence is not stored locally and this is not a vector search over all of PubMed.
+
+Retrieval is tuned so a known refutation actually comes back. Several searches run per claim and are unioned: a broad one on intervention and outcome, one limited to strong study types, one targeting contradiction terms such as \emph{risk}, \emph{harm}, and \emph{no benefit}, a retraction-targeted one so link expansion can reach a retraction notice, and a condition-focused one on intervention and population, since a descriptive outcome over-narrows while the disease name pins a landmark trial. Two sources are queried independently. Embeddings are used only to re-rank an already-fetched pool during validation; they cannot recover a study the queries never returned. Whether the queries succeed is the central failure mode, and exactly what the validation measures.
+
+\subsection{Stance judgment}
+
+An LLM labels each candidate study as supporting, refuting, or neutral toward the claim, and reports a confidence with each label. The judge reads only each study's title and abstract, never its full text. This is a deliberate cost trade-off: abstracts are cheap to fetch and short to send, but a refutation or a condition caveat that lives only in a paper's Results or Methods is invisible to the judge. It is a known ceiling on both stance recall and precision, accepted for the proof of concept.
+
+\subsection{Scoring and verdict}
+
+Scoring is a mechanical aggregation of the stance labels, weighted by evidence tier, with fixed thresholds. The arithmetic and the keep or drop decision are deterministic and never call the model, but the labels and confidences they combine are model judgments, so the stance judge is load-bearing for the direction of a verdict even though it never makes the verdict itself.
+
+A retraction fast path runs first. If the paper's own XML shows it is formally retracted, via a \texttt{RetractionIn} link or the \texttt{Retracted Publication} publication type, it is dropped immediately with \texttt{verdict\_basis = retraction}, skipping extraction, retrieval, and stance. This is the cheapest and strongest signal. A present retraction signal is reliable; its absence is not proof a paper was not retracted, given indexing lag, so every other paper is scored on retrieved evidence.
+
+Each retrieved study is weighed by its publication-type evidence tier (guideline 1.0, retraction 0.95, systematic review 0.9, meta-analysis 0.85, RCT 0.8, observational 0.5, case report 0.2, anything else 0.4). Its pull on a claim is that tier times the stance judge's confidence. A claim's score starts at 0.5, rises with aggregated supporting evidence and falls with aggregated refuting evidence, with refutation weighed roughly twice as heavily. The aggregate is not the single strongest study: the strongest sets the base and each further agreeing study adds a diminishing share, so a consistent body of evidence counts for more than one study while many weak studies cannot overpower one strong study, because each study's weight already reflects its tier.
+
+The per-claim verdict is one of \texttt{refuted}, \texttt{contested}, \texttt{supported}, \texttt{neutral} (only neutral evidence found), or \texttt{ungrounded} (no evidence found). A claim is \texttt{refuted}, which drops its paper, only when the refutation is strong and corroborated: at least two separate studies refute it, the combined refuting strength is at least 0.6, and the strongest of those studies is tier 0.8 or higher with a stance confidence of at least 0.7. Requiring two studies means a single refutation of one claim in a multi-claim paper down-weights rather than drops it, which was the main cause of wrongful drops. Anything weaker, or any claim with evidence on both sides, is \texttt{contested}.
+
+The paper takes the verdict and action of its single most damning claim: its score is the lowest claim score, its verdict the worst. The mapping to an action is fixed, shown in Table~\ref{tab:actions}. A paper correct when written and later superseded but never actually contradicted is kept on purpose, because a once-true paper is not false and science is incremental. Only a genuine subsequent refutation moves a paper off \texttt{keep}.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lll}
+\toprule
+\textbf{Verdict} & \textbf{Action} & \textbf{Meaning} \\
+\midrule
+\texttt{refuted} & drop & High-tier evidence contradicts the claim. \\
+\texttt{contested} & downweight & Evidence points both ways, or the refutation is weak. \\
+\texttt{supported} & keep & Evidence backs the claim, no credible refutation. \\
+\texttt{neutral} & keep & Only neutral evidence found; a missing refutation is not disproof. \\
+\texttt{ungrounded} & review & No evidence found at all; flagged for a human. \\
+\bottomrule
+\end{tabular}
+\caption{Verdict-to-action mapping. A paper inherits the action of its most damning claim.}
+\label{tab:actions}
+\end{table}
+
+\section{Validation}
+
+The filter is only as good as its search, so the validation harness measures retrieval directly, on claims the field already knows were wrong and whose disproving study is recorded in advance. It runs the filter's search and checks how often the known study comes back, scored in stages so a failure traces to the right one.
+
+\subsection{Gold set}
+
+The gold slice holds twenty reversed claims and twelve controls. The reversed claims split into two kinds. A \emph{reversal} is good-faith science superseded by a newer study, found by keyword and high-tier search: sixteen such cases, including HRT and coronary heart disease overturned by WHI \citep{whi2002}, antiarrhythmics after myocardial infarction overturned by CAST \citep{cast1989}, and vertebroplasty for osteoporotic fractures overturned by a sham-controlled trial \citep{buchbinder2009}. A \emph{fabrication} is retracted misconduct whose disproving evidence is the retraction notice, reached by a retraction-targeted query: four such cases. The twelve controls are still-supported claims that must be kept. Every disproving PMID was verified against PubMed esummary; the gold set is the most accuracy-critical artifact in the project.
+
+\subsection{Metrics}
+
+Retrieval recall is the fraction of known disproving studies that the search brought back. It does not depend on the model, so it is the primary number. Recall@k is retrieval recall counting only cases where the disproving study ranked in the top $k$ by semantic rank. Stance recall is the fraction of retrieved disproving studies that the stance judge labelled refuting. The false-contradiction rate is the fraction of still-true controls where any candidate was labelled refuting; it guards precision, since a harness that flags everything has perfect recall and no value. Each miss is tagged with a root cause: \texttt{not\_indexed}, \texttt{entity\_miss}, \texttt{retrieved\_not\_recognized}, \texttt{condition\_mismatch}, or \texttt{tier\_inversion}.
+
+\subsection{Results}
+
+Results are summarised in Table~\ref{tab:results}. Retrieval recall is 90\%, measured model-free and exactly. Stance recall, using sbert re-ranking and Gemini 2.5 Flash Lite for stance, is 85\% over all reversed claims. The false-contradiction rate is 25\% (3 of 12 controls), but no control was dropped: each of the three flagged controls had more supporting than refuting evidence, so the filter scored it \texttt{contested} (down-weight) rather than \texttt{refuted}. The strict drop thresholds turn a mislabelled control into a reversible down-weight, which is the design intent.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lr}
+\toprule
+\textbf{Metric} & \textbf{Result} \\
+\midrule
+Retrieval recall (model-free) & 90\% (18/20) \\
+Stance recall (Gemini 2.5 Flash Lite) & 85\% (17/20) \\
+False-contradiction rate on controls & 25\% (3/12) \\
+Controls wrongly dropped & 0/12 \\
+Claim-extraction recall & 83\% \\
+Condition retention & 93--100\% \\
+\bottomrule
+\end{tabular}
+\caption{Validation results on the gold slice: 16 reversals, 4 fabrications, 12 controls. Retrieval is measured model-free; stance and precision use a real stance backend.}
+\label{tab:results}
+\end{table}
+
+Claim extraction, comparing Gemini 2.5 Flash Lite against a stronger reference model, found 83\% of the expected claims and kept their conditions 93 to 100\% of the time. Its precision is lower, near 43\%, because it extracts more, finer-grained claims than the reference. Since only some metrics need a real LLM (retrieval recall and recall@k are deterministic and measurable for free, while stance and precision need a paid backend), the retrieval number that anchors the filter can be checked at no cost.
+
+\section{Analysis}
+
+\subsection{The two retrieval misses}
+
+Two reversals are not recovered, and both are accepted limitations rather than bugs. The peptic-ulcer etiology reversal shares only the disease with its refutation: the claim is about stress and acid, the answer is \emph{Helicobacter pylori} \citep{marshall1984}, so no keyword or MeSH query reaches it without already naming the bacterium. This is a known limit of keyword search for conceptual reversals. The vertebroplasty reversal's landmark trial is buried among many similar high-tier trials that the condition alone does not disambiguate. Bridging either would need a semantic query-expansion step, which is deferred on purpose rather than risking control precision by over-broadening the search. The filter is precision first, so some misses are acceptable.
+
+\subsection{Behaviour on ordinary papers}
+
+The harness measures known reversals, which is the friendly tail. To see behaviour on ordinary papers, the filter was run on thirty recent, non-retracted papers across common clinical areas. It kept fifteen, down-weighted fourteen, and dropped one, so half were not kept. That rate is high, driven mainly by review and guideline papers: they make many claims and so are more exposed to a single flagged claim than a primary research paper, under the most-damning-claim rollup. The single drop was a corroborated refutation of one claim, which is exactly what the drop action is reserved for.
+
+\subsection{The abstract-only ceiling}
+
+The stance judge reads titles and abstracts, not full text. A refutation or a caveat stated only in a paper's Results or Methods cannot be seen, which caps both stance recall and precision. The residual softness in the control results, controls flagged as contested, is a stance-judge limitation and not a retrieval one; retrieval surfaced the right evidence, and the abstract-level judgment on it was ambiguous.
+
+\section{Limitations and Future Work}
+
+Several limits are deliberate for a proof of concept. Evidence is weighted by a flat publication-type tier, which rates a study by its type label alone; GRADE \citep{grade2008} would keep the same role but adjust for risk of bias, inconsistency, indirectness, and imprecision, so evidence quality rather than study type drives the verdict. Retrieval uses brute-force cosine over a fetched pool; an approximate-nearest-neighbour index would scale it. Query construction is keyword and boolean; LLM-driven query and topic expansion would match on meaning and reach the conceptual reversals that keyword search cannot. Stance reads abstracts only; reading full text would give the judge the context to rule out false refutations. All of these are on the roadmap and none is built.
+
+The evaluation has its own gaps. The gold slice is twenty famous reversals, the easy tail, and needs harder, more ordinary cases so recall is not measured only on the friendliest examples. There is no end-to-end accuracy number on a human-labelled set of ordinary papers, which is the highest-signal next evaluation step. The extraction scoring run against its reference set is written but deferred, because running the extractor needs a real LLM. The reference claims themselves were written by a strong model rather than a person, so the extraction check measures agreement between two models, not agreement with human ground truth.
+
+\section{Conclusion}
+
+A medical training corpus can be screened for factuality by retrieving evidence and checking each paper's claims against it, rather than judging the paper by how it reads. MedScreen does this with an LLM confined to extraction and stance, a deterministic tier-weighted scorer that makes the keep or drop decision, and a retraction fast path for the strongest signal. Because the whole approach rests on retrieval, we measure retrieval directly: on a gold slice of known reversals, model-free retrieval recovers 90\% of disproving studies, and the strict corroboration thresholds mean no true control is wrongly dropped even when the stance judge is imperfect. The result is a transparent, auditable filter whose verdicts show the evidence they rest on. Before production use, stance judgment and query precision are the two things to improve, and the paths to both are clear.
+
+\bibliographystyle{plain}
+\bibliography{medscreen}
+
+\end{document}

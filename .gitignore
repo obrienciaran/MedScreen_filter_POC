@@ -80,3 +80,15 @@ Thumbs.db
 
 # Integration findings and analysis
 MEDMINT_INTEGRATION_FINDINGS.md
+
+# LaTeX build artifacts (regenerated on every build)
+paper/*.aux
+paper/*.bbl
+paper/*.blg
+paper/*.fdb_latexmk
+paper/*.fls
+paper/*.log
+paper/*.out
+paper/*.synctex.gz
+paper/*.toc
+paper/*.pdf
