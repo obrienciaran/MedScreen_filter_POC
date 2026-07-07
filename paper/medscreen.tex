@@ -8,7 +8,7 @@
 \usepackage{hyperref}
 \usepackage{booktabs}
 \usepackage{xcolor}
-\usepackage{natbib}
+\usepackage[authoryear,round]{natbib}
 \usepackage[margin=1in]{geometry}
 
 \title{MedScreen: Evidence-Based Factuality Filtering of Medical Training Data}
@@ -142,7 +142,7 @@ Two reversals are not recovered, and both are accepted limitations rather than b
 
 \subsection{Behaviour on ordinary papers}
 
-The harness measures known reversals, which is the friendly tail. To see behaviour on ordinary papers, the filter was run on thirty recent, non-retracted papers across common clinical areas. It kept fifteen, down-weighted fourteen, and dropped one, so half were not kept. That rate is high, driven mainly by review and guideline papers: they make many claims and so are more exposed to a single flagged claim than a primary research paper, under the most-damning-claim rollup. The single drop was a corroborated refutation of one claim, which is exactly what the drop action is reserved for.
+The harness measures known reversals, which are the easiest cases. To see behaviour on ordinary papers, the filter was run on thirty recent, non-retracted papers across common clinical areas. It kept fifteen, down-weighted fourteen, and dropped one, so half were not kept. That rate is high, driven mainly by review and guideline papers: they make many claims and so are more exposed to a single flagged claim than a primary research paper, under the most-damning-claim rollup. The single drop was a corroborated refutation of one claim, which is exactly what the drop action is reserved for.
 
 \subsection{The abstract-only ceiling}
 
@@ -152,13 +152,17 @@ The stance judge reads titles and abstracts, not full text. A refutation or a ca
 
 Several limits are deliberate for a proof of concept. Evidence is weighted by a flat publication-type tier, which rates a study by its type label alone; GRADE \citep{grade2008} would keep the same role but adjust for risk of bias, inconsistency, indirectness, and imprecision, so evidence quality rather than study type drives the verdict. Retrieval uses brute-force cosine over a fetched pool; an approximate-nearest-neighbour index would scale it. Query construction is keyword and boolean; LLM-driven query and topic expansion would match on meaning and reach the conceptual reversals that keyword search cannot. Stance reads abstracts only; reading full text would give the judge the context to rule out false refutations. All of these are on the roadmap and none is built.
 
-The evaluation has its own gaps. The gold slice is twenty famous reversals, the easy tail, and needs harder, more ordinary cases so recall is not measured only on the friendliest examples. There is no end-to-end accuracy number on a human-labelled set of ordinary papers, which is the highest-signal next evaluation step. The extraction scoring run against its reference set is written but deferred, because running the extractor needs a real LLM. The reference claims themselves were written by a strong model rather than a person, so the extraction check measures agreement between two models, not agreement with human ground truth.
+The evaluation has its own gaps. The reported results were measured on a seed of twenty well-known reversals and twelve controls, the easiest cases. That set has since been doubled to sixty-four claims (twenty-eight reversals, four fabrications, and thirty-two controls), adding less-famous reversals and more ordinary controls so recall is not measured only on the most favourable examples; re-measuring on the expanded set is the immediate next step. There is still no end-to-end accuracy figure on a human-labelled set of ordinary papers, which is the most informative evaluation to add. The extraction scoring run against its reference set is written but deferred, because running the extractor needs a real LLM. The reference claims themselves were written by a strong model rather than a person, so the extraction check measures agreement between two models, not agreement with human ground truth.
 
 \section{Conclusion}
 
 A medical training corpus can be screened for factuality by retrieving evidence and checking each paper's claims against it, rather than judging the paper by how it reads. MedScreen does this with an LLM confined to extraction and stance, a deterministic tier-weighted scorer that makes the keep or drop decision, and a retraction fast path for the strongest signal. Because the whole approach rests on retrieval, we measure retrieval directly: on a gold slice of known reversals, model-free retrieval recovers 90\% of disproving studies, and the strict corroboration thresholds mean no true control is wrongly dropped even when the stance judge is imperfect. The result is a transparent, auditable filter whose verdicts show the evidence they rest on. Before production use, stance judgment and query precision are the two things to improve, and the paths to both are clear.
 
-\bibliographystyle{plain}
+\section*{Code and Data Availability}
+
+The MedScreen proof-of-concept implementation, including the validation harness and the gold dataset of consensus reversals, is publicly available at \url{https://github.com/obrienciaran/MedScreen_filter_POC} \citep{medscreen}.
+
+\bibliographystyle{plainnat}
 \bibliography{medscreen}
 
 \end{document}

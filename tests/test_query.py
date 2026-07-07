@@ -55,10 +55,11 @@ def test_pubmed_queries_have_condition_focused_rung():
     )
 
 
-def test_condition_rung_absent_without_population():
-    # With no population there is no condition rung: the only high-tier query keeps the outcome.
+def test_intervention_only_high_tier_rung():
+    # An intervention-only high-tier rung drops the outcome so a landmark trial that phrases the
+    # outcome differently is still surfaced. Present even without a population.
     qs = query.pubmed_queries(NormalizedClaim(intervention="aspirin", outcome="stroke"))
-    assert not any("Meta-Analysis" in q and "stroke" not in q for q in qs)
+    assert any("(aspirin)" in q and "Meta-Analysis" in q and "stroke" not in q for q in qs)
 
 
 def test_europepmc_queries_nonempty_and_unique():
@@ -66,3 +67,5 @@ def test_europepmc_queries_nonempty_and_unique():
     assert qs and all(qs)
     assert len(qs) == len(set(qs))
     assert any("PUB_TYPE" in q for q in qs)
+    # intervention-only high-tier rung, outcome dropped
+    assert any("hydroxychloroquine" in q and "PUB_TYPE" in q and "mortality" not in q for q in qs)

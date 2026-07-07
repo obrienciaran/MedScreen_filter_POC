@@ -128,18 +128,23 @@ import the Protocol from here.
 `scraping/` (network fetchers): `pubmed.py` and `europepmc.py` evidence providers,
 `sources.py` (the `get_sources` registry), `links.py` (pool expansion via PubMed retraction
 links), `evidence.py` (the filter's `Retriever`, where the stub uses the paper's own comment
-and retraction links and the live backend reuses the sources), and `http.py` (shared httpx
+and retraction links and the live backend reuses the sources, caps the pool at `limit` (20)
+per claim with dispute links first, and, when `MEDSCREEN_EMBED_BACKEND=sbert`, re-ranks the
+query hits by semantic similarity before the cap using the shared DuckDB embedding cache), and
+`http.py` (shared httpx
 client, rate limiting, TLS handling: `MEDSCREEN_INSECURE_TLS`, `MEDSCREEN_CA_BUNDLE`,
 `NCBI_EMAIL`, `NCBI_API_KEY`).
 
 `transformation/`: `medline.py` (leaf extractors for efetch XML, shared by
 `scraping/pubmed.py` and `transformation/ingest.py` so the two parsers cannot drift),
 `ingest.py` (parses PubMed XML into `PaperRecord` and validates input, the pure parser is
-tested), `query.py` (builds queries), `semantic.py` (re-ranks behind the `Embedder` Protocol),
-`extract.py` (lifts claims behind `ClaimExtractor`, stub and LLM), `stance.py` (stance
-classification behind `StanceBackend`, `classify_batch` runs calls concurrently, stub lexical
-and `LLMStance`), and `scoring.py` (weighs stance into per-claim and per-paper verdicts, pure
-and tested).
+tested), `query.py` (builds queries, including an intervention-only high-tier rung),
+`semantic.py` (ranking behind the `Embedder` Protocol: `stub` by default, `sbert` biomedical
+model on GPU when selected, used by both the filter and the harness against one shared DuckDB
+embedding cache), `extract.py` (lifts claims behind `ClaimExtractor`, stub and LLM), `stance.py`
+(stance classification behind `StanceBackend`, `classify_batch` runs calls concurrently, stub
+lexical and `LLMStance`; reads full text over abstract when `MEDSCREEN_STANCE_FULLTEXT=1`), and
+`scoring.py` (weighs stance into per-claim and per-paper verdicts, pure and tested).
 
 `reporting/` (output): `metrics.py` and `report.py` (validation tool aggregation, markdown plus CSV),
 `flat_report.py` (the filter's flat CSV), and `graph.py` (`build_graph_data` and
@@ -163,7 +168,10 @@ Swappable plug points share the same Protocol shape: `Source`, `Embedder`, `Stan
 placeholder that fakes the step with no LLM and no network) so the filter and validation tool run
 offline, plus a real backend. Real runs need `MEDSCREEN_LLM_PROVIDER` in {anthropic, openai,
 gemini}, `MEDSCREEN_EXTRACT_BACKEND=llm`, `MEDSCREEN_STANCE_BACKEND=llm`, and
-`MEDSCREEN_RETRIEVER=live` (and `MEDSCREEN_EMBED_BACKEND=sbert` for the validation tool). Stub output is a
+`MEDSCREEN_RETRIEVER=live`. `MEDSCREEN_EMBED_BACKEND=sbert` turns on semantic ranking for both the
+filter (top-20 query hits per claim) and the validation tool (`recall@k` and stance selection);
+`MEDSCREEN_STANCE_FULLTEXT=1` makes the stance judge read open-access full text over the abstract.
+Stub output is a
 placeholder, not a real result. Real use always runs the live retriever against PubMed/Europe PMC; the
 stub retriever is only for test cases and the gold-standard validation slice, never for a production verdict.
 
@@ -171,8 +179,10 @@ stub retriever is only for test cases and the gold-standard validation slice, ne
 
 `data/gold/consensus_reversals.yaml` is the gold dataset. Reversed claims carry the PMIDs of
 the studies that overturned them (the known disproving studies). Controls carry none. All
-those PMIDs were verified against PubMed esummary. It is a high-precision seed (ten reversals, eight controls).
-It is the most accuracy-critical artifact, so change it with care.
+those PMIDs were verified against PubMed esummary/efetch. It holds 64 claims (28 reversals + 4
+fabrications + 32 controls), doubled from an earlier seed of half the size. It is the most
+accuracy-critical artifact, so change it with care. The headline recall/stance metrics in the
+docs were measured on the original 32-claim seed; re-measurement on the full set is pending.
 
 ### Invariants
 

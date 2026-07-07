@@ -53,7 +53,11 @@ MEDSCREEN_EMBED_BACKEND=sbert MEDSCREEN_STANCE_BACKEND=<provider> MEDSCREEN_LLM_
   medscreen-run --use-cache
 ```
 
-### Results (gold slice: 16 reversals, 4 fabrications, 12 controls)
+### Results (original seed: 16 reversals, 4 fabrications, 12 controls)
+
+The gold set has since been doubled to 64 claims (28 reversals + 4 fabrications + 32 controls).
+The figures below were measured on the original 32-claim seed; re-measurement on the full set is
+pending and will refresh them.
 
 Retrieval recall is 90% (18 of 20), model-free and exact.
 

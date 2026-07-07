@@ -95,6 +95,7 @@ def score_claim(
         refute_strength, refuting_tier, refuting_confidence,
     )
 
+    n_fulltext = sum(1 for l in labels if l.text_source == "full_text")
     return ClaimVerdict(
         claim_id=claim.claim_id, claim_text=claim.claim_text,
         n_evidence=len(labels), n_refuting=len(refuting), n_supporting=len(supporting),
@@ -102,6 +103,7 @@ def score_claim(
         refuting_confidence=refuting_confidence, refuting_year=refuting_year,
         refuting_pmids=[l.candidate_ext_id for l in refuting],
         supporting_pmids=[l.candidate_ext_id for l in supporting],
+        n_fulltext_evidence=n_fulltext, n_abstract_evidence=len(labels) - n_fulltext,
     )
 
 
@@ -152,6 +154,8 @@ def score_paper(paper: PaperRecord, claim_verdicts: list[ClaimVerdict]) -> Paper
         top_refuting_tier=max(cv.top_refuting_tier for cv in claim_verdicts),
         grounded=any(cv.n_supporting > 0 for cv in claim_verdicts),
         refuting_pmids=refuting_pmids, claim_verdicts=claim_verdicts,
+        n_fulltext_evidence=sum(cv.n_fulltext_evidence for cv in claim_verdicts),
+        n_abstract_evidence=sum(cv.n_abstract_evidence for cv in claim_verdicts),
     )
 
 

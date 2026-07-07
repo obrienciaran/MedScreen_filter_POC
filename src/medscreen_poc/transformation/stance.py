@@ -33,6 +33,22 @@ def _as_float(value: object, default: float) -> float:
         return default
 
 
+_ABSTRACT_CHARS = 4000
+
+
+def _evidence_text(candidate: Candidate) -> tuple[str, str]:
+    """The text the stance judge should read for a candidate, and which kind it is.
+
+    Prefers the study's full text when it was fetched (open-access subset, full-text stance
+    enabled), truncated to ``MEDSCREEN_STANCE_FULLTEXT_CHARS``; otherwise the abstract. Returns
+    ``(text, "full_text" | "abstract")`` so the choice is recorded on the label.
+    """
+    if candidate.full_text:
+        budget = int(os.environ.get("MEDSCREEN_STANCE_FULLTEXT_CHARS", "24000"))
+        return candidate.full_text[:budget], "full_text"
+    return (candidate.abstract or "")[:_ABSTRACT_CHARS] or "(no abstract)", "abstract"
+
+
 # Lexical cues used only by the stub backend.
 _REFUTE_CUES = (
     "no benefit", "no significant", "increased risk", "increased mortality", "harm",
@@ -48,7 +64,8 @@ class StubStance:
     name = "stub"
 
     def classify(self, gold: GoldEntry, candidate: Candidate) -> StanceLabel:
-        text = f"{candidate.title} {candidate.abstract}".lower()
+        body, text_source = _evidence_text(candidate)
+        text = f"{candidate.title} {body}".lower()
         hits = [c for c in _REFUTE_CUES if c in text]
         if hits:
             stance = Stance.REFUTES
@@ -61,6 +78,7 @@ class StubStance:
         return StanceLabel(
             claim_id=gold.id, candidate_ext_id=candidate.ext_id,
             stance=stance, confidence=conf, rationale=rationale, condition_match=None,
+            text_source=text_source,
         )
 
 
@@ -74,7 +92,7 @@ EVIDENCE:
 Title: {title}
 Publication types: {pub_types}
 Year: {year}
-Abstract: {abstract}
+Evidence text ({text_source}): {evidence_text}
 
 Decide the stance of the EVIDENCE toward the CLAIM. Critically, only judge "refutes" \
 if the evidence concerns the SAME population, intervention and outcome the claim asserts \
@@ -96,6 +114,7 @@ class LLMStance:
 
     def classify(self, gold: GoldEntry, candidate: Candidate) -> StanceLabel:
         n = gold.normalized
+        evidence_text, text_source = _evidence_text(candidate)
         prompt = _PROMPT.format(
             claim_text=gold.claim_text,
             intervention=n.intervention, outcome=n.outcome,
@@ -104,13 +123,13 @@ class LLMStance:
             direction=n.direction or "unspecified",
             title=candidate.title, pub_types=", ".join(candidate.pub_types) or "unknown",
             year=candidate.year or "unknown",
-            abstract=(candidate.abstract or "")[:4000] or "(no abstract)",
+            text_source=text_source.replace("_", " "), evidence_text=evidence_text,
         )
         text = self._client.complete(prompt, max_tokens=300)
-        return self._parse(gold.id, candidate.ext_id, text)
+        return self._parse(gold.id, candidate.ext_id, text, text_source)
 
     @staticmethod
-    def _parse(claim_id: str, ext_id: str, text: str) -> StanceLabel:
+    def _parse(claim_id: str, ext_id: str, text: str, text_source: str = "abstract") -> StanceLabel:
         data: dict = {}
         stance = Stance.NEUTRAL
         try:
@@ -130,6 +149,7 @@ class LLMStance:
             confidence=_as_float(data.get("confidence"), 0.0),
             rationale=str(data.get("rationale", "")),
             condition_match=condition_match if isinstance(condition_match, bool) else None,
+            text_source=text_source if text_source in ("full_text", "abstract") else "abstract",
         )
 
 

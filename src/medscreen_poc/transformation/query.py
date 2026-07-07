@@ -105,6 +105,11 @@ def pubmed_queries(claim: NormalizedClaim) -> list[str]:
         f"{core} AND {_CONTRADICTION_PUBMED}",   # contradiction-seeking
     ]
     if intervention:
+        # Intervention-only high-tier: a landmark trial reliably names the intervention but
+        # often phrases the outcome differently, so ANDing the outcome buries it. Dropping the
+        # outcome and keeping the high-tier filter surfaces the strong studies on the
+        # intervention itself (recovers ACCORD, ASPREE, torcetrapib, niacin).
+        queries.append(f"({intervention}) AND {HIGH_TIER_PUBMED}")
         queries.append(f"({intervention}) AND {_RETRACTED_PUBMED}")  # retraction-targeted
     if intervention and population:
         queries.append(f"({intervention}) AND ({population}) AND {HIGH_TIER_PUBMED}")  # condition-focused
@@ -125,6 +130,10 @@ def europepmc_queries(claim: NormalizedClaim) -> list[str]:
     if not core:
         return []
     queries = [core, f"({core}) AND ({_EUROPEPMC_HIGH_TIER})"]
+    if intervention:
+        # Intervention-only high-tier, mirroring the PubMed rung: surfaces strong studies on the
+        # intervention when a differently-worded outcome would otherwise bury the landmark trial.
+        queries.append(f"({intervention}) AND ({_EUROPEPMC_HIGH_TIER})")
     if intervention and population:
         queries.append(f"({intervention}) AND ({population}) AND ({_EUROPEPMC_HIGH_TIER})")
     return _dedup(queries)

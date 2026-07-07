@@ -109,6 +109,12 @@ class Candidate(BaseModel):
     abstract: str = ""
     pub_types: list[str] = Field(default_factory=list)  # e.g. "Meta-Analysis", "Guideline"
     year: int | None = None
+    # Europe PMC full-text availability. pmcid and the open-access flag come from the search
+    # result; full_text is populated on demand from the Europe PMC open-access subset when
+    # full-text stance is enabled, and is empty otherwise so the stance judge reads the abstract.
+    pmcid: str | None = None
+    is_open_access: bool = False
+    full_text: str = ""
     # link relationships (PubMed ELink), a secondary contradiction signal
     is_retraction_of: list[str] = Field(default_factory=list)
     retracted_by: list[str] = Field(default_factory=list)
@@ -152,6 +158,10 @@ class StanceLabel(BaseModel):
     stance: Stance
     confidence: float = 0.0
     rationale: str = ""
+    # Which text the stance judge actually read for this candidate: its full text (Europe PMC
+    # open-access subset) when available and enabled, otherwise the abstract. Recorded so a
+    # verdict is auditable back to the depth of evidence the judge saw.
+    text_source: Literal["full_text", "abstract"] = "abstract"
     # Whether the candidate addresses the SAME condition (population/comparator) the
     # claim asserts. None when the backend can't judge it (e.g. the stub). False here
     # with stance != refutes is the signature of a condition-mismatch false negative.
@@ -252,6 +262,9 @@ class ClaimVerdict(BaseModel):
     refuting_year: int | None = None  # publication year of the strongest refuter, if known
     refuting_pmids: list[str] = Field(default_factory=list)
     supporting_pmids: list[str] = Field(default_factory=list)
+    # How many of this claim's candidates the stance judge read in full text vs abstract only.
+    n_fulltext_evidence: int = 0
+    n_abstract_evidence: int = 0
 
 
 class PaperVerdict(BaseModel):
@@ -281,4 +294,9 @@ class PaperVerdict(BaseModel):
     grounded: bool = True
     refuting_pmids: list[str] = Field(default_factory=list)
     claim_verdicts: list[ClaimVerdict] = Field(default_factory=list)
+    # Evidence depth the stance judge read across all this paper's claims: full-text vs
+    # abstract-only candidate counts. Both zero when no stance ran (retraction fast path, no
+    # claims, or an error).
+    n_fulltext_evidence: int = 0
+    n_abstract_evidence: int = 0
     notes: str = ""

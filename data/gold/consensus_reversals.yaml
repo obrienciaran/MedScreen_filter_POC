@@ -16,10 +16,11 @@
 # They measure the false-contradiction rate (a harness that flags everything has
 # perfect recall and zero value).
 #
-# This is a high-precision SEED set (16 reversals + 4 fabrications + 12 controls). Expand it
-# before treating any recall number as definitive — the metric's stability depends on N.
-# Conditions are kept attached in `normalized` on purpose: condition-stripped claims
-# manufacture false refutations (the HCQ lesson).
+# This is a high-precision set (28 reversals + 4 fabrications + 32 controls). It doubles an
+# earlier seed of half the size; expand it further before treating any recall number as
+# definitive — the metric's stability depends on N. Conditions are kept attached in
+# `normalized` on purpose: condition-stripped claims manufacture false refutations (the HCQ
+# lesson).
 
 entries:
   # ---------------------------------------------------------------- reversed ----
@@ -230,6 +231,164 @@ entries:
     reversal_year: 2007
     notes: "Meta-analysis found increased myocardial infarction risk."
 
+  # More reversals, added to broaden the set beyond the most famous cases. Each answer_key
+  # PMID was verified against PubMed efetch (title + year) at authoring time.
+  - id: accord-intensive-glucose
+    claim_text: "Intensive glucose lowering reduces cardiovascular events and mortality in type 2 diabetes."
+    normalized:
+      intervention: "intensive glucose control"
+      outcome: "mortality"
+      population: "patients with type 2 diabetes at high cardiovascular risk"
+      comparator: "standard glucose control"
+      direction: decreases
+    status: reversed
+    answer_key: ["18539917"]   # ACCORD, NEJM 2008
+    reversal_year: 2008
+    notes: "ACCORD found intensive control INCREASED all-cause mortality; the glucose arm was stopped early."
+
+  - id: aspirin-primary-elderly
+    claim_text: "Low-dose aspirin reduces mortality and cardiovascular events in healthy older adults in primary prevention."
+    normalized:
+      intervention: "aspirin"
+      outcome: "all-cause mortality"
+      population: "healthy community-dwelling adults aged 70 or older"
+      comparator: "placebo"
+      direction: decreases
+    status: reversed
+    answer_key: ["30221595"]   # ASPREE all-cause mortality, NEJM 2018
+    reversal_year: 2018
+    notes: "ASPREE found no cardiovascular benefit and higher all-cause mortality in the healthy elderly."
+
+  - id: orbita-pci-angina-symptoms
+    claim_text: "Percutaneous coronary intervention relieves angina and improves exercise capacity in stable single-vessel coronary disease."
+    normalized:
+      intervention: "percutaneous coronary intervention (stenting)"
+      outcome: "angina relief and exercise time"
+      population: "patients with stable single-vessel coronary disease on medical therapy"
+      comparator: "sham (placebo) procedure"
+      direction: decreases
+    status: reversed
+    answer_key: ["29103656"]   # ORBITA, Lancet 2018 (sham-controlled)
+    reversal_year: 2018
+    notes: "Sham-controlled ORBITA found no significant improvement in exercise time or angina over a placebo procedure. Distinct from COURAGE (hard endpoints)."
+
+  - id: perioperative-betablocker-noncardiac
+    claim_text: "Starting a beta-blocker before non-cardiac surgery reduces perioperative cardiac events."
+    normalized:
+      intervention: "perioperative beta-blocker metoprolol"
+      outcome: "cardiovascular events"
+      population: "patients undergoing non-cardiac surgery"
+      comparator: "placebo"
+      direction: decreases
+    status: reversed
+    answer_key: ["18479744"]   # POISE, Lancet 2008
+    reversal_year: 2008
+    notes: "POISE cut nonfatal MI but INCREASED total mortality and stroke; net harm."
+
+  - id: torcetrapib-cv
+    claim_text: "Torcetrapib reduces cardiovascular events by raising HDL cholesterol."
+    normalized:
+      intervention: "torcetrapib"
+      outcome: "cardiovascular events"
+      population: "patients at high cardiovascular risk"
+      comparator: "statin alone"
+      direction: decreases
+    status: reversed
+    answer_key: ["17984165"]   # ILLUMINATE, NEJM 2007
+    reversal_year: 2007
+    notes: "ILLUMINATE found INCREASED death and cardiac events despite higher HDL; development was halted."
+
+  - id: egdt-septic-shock
+    claim_text: "Early goal-directed therapy reduces mortality in septic shock."
+    normalized:
+      intervention: "early goal-directed therapy (protocolised hemodynamic targets)"
+      outcome: "mortality"
+      population: "patients presenting with early septic shock"
+      comparator: "usual care"
+      direction: decreases
+    status: reversed
+    answer_key: ["24635773"]   # ProCESS, NEJM 2014
+    reversal_year: 2014
+    notes: "ProCESS (with ARISE and ProMISe) found no survival benefit over usual care."
+
+  - id: hydroxyethyl-starch-resuscitation
+    claim_text: "Hydroxyethyl starch for fluid resuscitation improves survival compared with crystalloid in critically ill patients."
+    normalized:
+      intervention: "hydroxyethyl starch (HES) resuscitation fluid"
+      outcome: "survival and renal function"
+      population: "critically ill patients needing fluid resuscitation"
+      comparator: "crystalloid (saline)"
+      direction: decreases
+    status: reversed
+    answer_key: ["23075127"]   # CHEST, NEJM 2012
+    reversal_year: 2012
+    notes: "CHEST found no survival benefit and more renal replacement therapy with HES. Distinct from the Boldt fabrication case."
+
+  - id: arthroscopy-meniscal-tear
+    claim_text: "Arthroscopic partial meniscectomy relieves knee pain from a degenerative meniscal tear."
+    normalized:
+      intervention: "arthroscopic partial meniscectomy"
+      outcome: "knee pain and function"
+      population: "patients with a degenerative meniscal tear without osteoarthritis"
+      comparator: "sham surgery"
+      direction: decreases
+    status: reversed
+    answer_key: ["24369076"]   # FIDELITY, NEJM 2013 (sham-controlled)
+    reversal_year: 2013
+    notes: "Sham-controlled trial found no benefit over placebo surgery. Distinct from arthroscopy-knee-oa (Moseley)."
+
+  - id: niacin-statin-cv
+    claim_text: "Adding niacin to statin therapy reduces cardiovascular events."
+    normalized:
+      intervention: "niacin"
+      outcome: "cardiovascular events"
+      population: "patients at high cardiovascular risk on statin therapy"
+      comparator: "statin alone"
+      direction: decreases
+    status: reversed
+    answer_key: ["25014686"]   # HPS2-THRIVE, NEJM 2014
+    reversal_year: 2014
+    notes: "HPS2-THRIVE found no reduction in vascular events and significant excess harms."
+
+  - id: omega3-primary-prevention
+    claim_text: "Omega-3 (marine n-3) fatty acid supplementation prevents cardiovascular disease."
+    normalized:
+      intervention: "marine n-3 (omega-3) fatty acid supplementation"
+      outcome: "major cardiovascular events"
+      population: "adults in primary prevention"
+      comparator: "placebo"
+      direction: prevents
+    status: reversed
+    answer_key: ["30415637"]   # VITAL, NEJM 2019
+    reversal_year: 2019
+    notes: "VITAL found no significant reduction in major cardiovascular events for n-3 supplementation."
+
+  - id: dronedarone-permanent-af
+    claim_text: "Dronedarone reduces cardiovascular events in patients with permanent atrial fibrillation."
+    normalized:
+      intervention: "dronedarone"
+      outcome: "cardiovascular death, stroke, and hospitalization"
+      population: "patients with permanent atrial fibrillation at high risk"
+      comparator: "placebo"
+      direction: decreases
+    status: reversed
+    answer_key: ["22082198"]   # PALLAS, NEJM 2011
+    reversal_year: 2011
+    notes: "PALLAS was stopped early for INCREASED death, stroke, and heart-failure events."
+
+  - id: calcium-vitd-fractures
+    claim_text: "Calcium plus vitamin D supplementation prevents fractures in community-dwelling postmenopausal women."
+    normalized:
+      intervention: "calcium plus vitamin D supplementation"
+      outcome: "hip and total fractures"
+      population: "community-dwelling postmenopausal women"
+      comparator: "placebo"
+      direction: prevents
+    status: reversed
+    answer_key: ["16481635"]   # WHI CaD, NEJM 2006
+    reversal_year: 2006
+    notes: "The WHI calcium/vitamin D trial found no significant reduction in hip fracture in the overall population."
+
   # ------------------------------------------------------------- fabrication ----
   # Research-misconduct cases. The claim is false because the data were fabricated or
   # falsified, and the paper was formally retracted. The answer_key is the RETRACTION
@@ -404,3 +563,200 @@ entries:
       direction: decreases
     status: still_true
     notes: "Stable clinical fact; should be trivially uncontradicted."
+
+  # Generic still-true controls added to broaden the set. Well-established consensus claims
+  # across common clinical areas; they carry no answer_key and should not be flagged refuted.
+  - id: ctrl-anticoagulation-af-stroke
+    claim_text: "Oral anticoagulation reduces stroke risk in patients with atrial fibrillation."
+    normalized:
+      intervention: "oral anticoagulation"
+      outcome: "ischemic stroke"
+      population: "patients with atrial fibrillation at elevated stroke risk"
+      comparator: "no anticoagulation"
+      direction: decreases
+    status: still_true
+
+  - id: ctrl-hbv-vaccine
+    claim_text: "Hepatitis B vaccination prevents hepatitis B virus infection."
+    normalized:
+      intervention: "hepatitis B vaccination"
+      outcome: "hepatitis B virus infection"
+      population: "susceptible children and adults"
+      direction: prevents
+    status: still_true
+
+  - id: ctrl-hpv-vaccine
+    claim_text: "HPV vaccination prevents cervical precancerous lesions."
+    normalized:
+      intervention: "human papillomavirus (HPV) vaccination"
+      outcome: "high-grade cervical precancer (CIN2+)"
+      population: "adolescent girls and young women"
+      comparator: "placebo or no vaccination"
+      direction: prevents
+    status: still_true
+
+  - id: ctrl-dexamethasone-covid
+    claim_text: "Dexamethasone reduces mortality in hospitalized COVID-19 patients requiring oxygen."
+    normalized:
+      intervention: "dexamethasone"
+      outcome: "mortality"
+      population: "hospitalized COVID-19 patients requiring supplemental oxygen or ventilation"
+      comparator: "usual care"
+      direction: decreases
+    status: still_true
+    notes: "Condition matters: benefit is in oxygen-requiring patients. Contrasts with the HCQ reversal."
+
+  - id: ctrl-thrombolysis-stroke
+    claim_text: "Intravenous thrombolysis improves functional outcome in acute ischemic stroke treated early."
+    normalized:
+      intervention: "intravenous thrombolysis (alteplase)"
+      outcome: "death or disability"
+      population: "acute ischemic stroke patients treated within the licensed time window"
+      comparator: "placebo"
+      direction: decreases
+    status: still_true
+
+  - id: ctrl-metformin-t2dm
+    claim_text: "Metformin lowers HbA1c in patients with type 2 diabetes."
+    normalized:
+      intervention: "metformin"
+      outcome: "HbA1c (glycemic control)"
+      population: "patients with type 2 diabetes"
+      comparator: "placebo"
+      direction: decreases
+    status: still_true
+
+  - id: ctrl-vitamin-k-newborn
+    claim_text: "Vitamin K prophylaxis at birth prevents hemorrhagic disease of the newborn."
+    normalized:
+      intervention: "vitamin K prophylaxis at birth"
+      outcome: "vitamin K deficiency bleeding"
+      population: "newborn infants"
+      direction: prevents
+    status: still_true
+
+  - id: ctrl-antenatal-steroids
+    claim_text: "Antenatal corticosteroids reduce neonatal respiratory distress in threatened preterm birth."
+    normalized:
+      intervention: "antenatal corticosteroids"
+      outcome: "neonatal respiratory distress syndrome"
+      population: "women at risk of preterm birth"
+      comparator: "placebo or no treatment"
+      direction: decreases
+    status: still_true
+
+  - id: ctrl-ors-diarrhea
+    claim_text: "Oral rehydration therapy reduces mortality in acute childhood diarrhea."
+    normalized:
+      intervention: "oral rehydration therapy"
+      outcome: "mortality"
+      population: "children with acute diarrhea and dehydration"
+      direction: decreases
+    status: still_true
+
+  - id: ctrl-betablocker-hfref
+    claim_text: "Beta-blockers reduce mortality in heart failure with reduced ejection fraction."
+    normalized:
+      intervention: "beta-blocker therapy"
+      outcome: "mortality"
+      population: "patients with heart failure with reduced ejection fraction"
+      comparator: "placebo"
+      direction: decreases
+    status: still_true
+
+  - id: ctrl-ics-asthma
+    claim_text: "Inhaled corticosteroids reduce exacerbations in persistent asthma."
+    normalized:
+      intervention: "inhaled corticosteroids"
+      outcome: "asthma exacerbations"
+      population: "patients with persistent asthma"
+      comparator: "placebo"
+      direction: decreases
+    status: still_true
+
+  - id: ctrl-hand-hygiene-hai
+    claim_text: "Hand hygiene reduces healthcare-associated infections."
+    normalized:
+      intervention: "hand hygiene programs"
+      outcome: "healthcare-associated infections"
+      population: "hospitalized patients"
+      direction: decreases
+    status: still_true
+
+  - id: ctrl-spironolactone-hf
+    claim_text: "Spironolactone reduces mortality in severe heart failure with reduced ejection fraction."
+    normalized:
+      intervention: "spironolactone"
+      outcome: "mortality"
+      population: "patients with severe heart failure with reduced ejection fraction"
+      comparator: "placebo"
+      direction: decreases
+    status: still_true
+
+  - id: ctrl-tamoxifen-breast
+    claim_text: "Adjuvant tamoxifen reduces recurrence in estrogen-receptor-positive breast cancer."
+    normalized:
+      intervention: "adjuvant tamoxifen"
+      outcome: "breast cancer recurrence"
+      population: "women with estrogen-receptor-positive breast cancer"
+      comparator: "no tamoxifen"
+      direction: decreases
+    status: still_true
+
+  - id: ctrl-magnesium-eclampsia
+    claim_text: "Magnesium sulfate reduces the risk of eclampsia in women with pre-eclampsia."
+    normalized:
+      intervention: "magnesium sulfate"
+      outcome: "eclamptic seizures"
+      population: "women with pre-eclampsia"
+      comparator: "placebo"
+      direction: prevents
+    status: still_true
+
+  - id: ctrl-surfactant-rds
+    claim_text: "Surfactant therapy reduces mortality in neonatal respiratory distress syndrome."
+    normalized:
+      intervention: "exogenous surfactant therapy"
+      outcome: "mortality"
+      population: "preterm infants with respiratory distress syndrome"
+      comparator: "placebo or no surfactant"
+      direction: decreases
+    status: still_true
+
+  - id: ctrl-anti-d-rh-disease
+    claim_text: "Anti-D immunoglobulin prevents Rhesus hemolytic disease of the newborn."
+    normalized:
+      intervention: "anti-D (Rh) immunoglobulin"
+      outcome: "Rhesus hemolytic disease of the newborn"
+      population: "Rh-negative pregnant women"
+      direction: prevents
+    status: still_true
+
+  - id: ctrl-adjuvant-chemo-colon
+    claim_text: "Adjuvant chemotherapy improves survival in resected stage III colon cancer."
+    normalized:
+      intervention: "adjuvant chemotherapy"
+      outcome: "recurrence and mortality"
+      population: "patients with resected stage III colon cancer"
+      comparator: "surgery alone"
+      direction: decreases
+    status: still_true
+
+  - id: ctrl-acei-diabetic-nephropathy
+    claim_text: "ACE inhibitors slow the progression of diabetic nephropathy."
+    normalized:
+      intervention: "ACE inhibitors"
+      outcome: "progression of diabetic kidney disease"
+      population: "patients with diabetic nephropathy"
+      comparator: "placebo"
+      direction: decreases
+    status: still_true
+
+  - id: ctrl-fluoride-caries
+    claim_text: "Water fluoridation reduces dental caries."
+    normalized:
+      intervention: "community water fluoridation"
+      outcome: "dental caries"
+      population: "children and adults"
+      direction: decreases
+    status: still_true

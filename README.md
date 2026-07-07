@@ -51,6 +51,7 @@ The columns in the screenshot:
 | `refuting_confidence` | The stance judge's confidence (`0.00`–`1.00`) behind the strongest refutation; `0.00` if none. |
 | `claim_scores` | Per-claim continuous scores as `claim_id=score` pairs, separated by `;`. |
 | `refuting_pmids` | PMIDs of every study that refutes any claim, separated by `;`; empty if none. |
+| `evidence_text_source` | Whether the stance judge read `full_text` or `abstract` for the majority of this paper's evidence. Full text is used when the study is in the Europe PMC open-access subset and full-text stance is enabled (`MEDSCREEN_STANCE_FULLTEXT=1`), otherwise the abstract. Empty when no evidence was judged (a formally retracted paper, or one with no evidence found). |
 | `notes` | A short free-text note (for example a retraction marker or an error), if any. |
 
 The `verdict` is a truthfulness category; the `action` is what it recommends doing with the
@@ -73,7 +74,14 @@ For each paper:
 1. Ingest: read the PubMed XML into a structured record (claim text, publication type, MeSH
    terms, retraction/comment links).
 2. Extract claims: an LLM lifts the paper's specific claims out of its text.
-3. Retrieve evidence: for each claim, fetch candidate studies that bear on it.
+3. Retrieve evidence: for each claim, fetch candidate studies that bear on it. The pool is
+   capped at 20 candidates per claim, which also bounds the stance step to at most 20 LLM calls
+   per claim. When more than 20 are found, the paper's own dispute links come first (retraction
+   notices, then comment/erratum links), then the boolean query hits fill the rest. By default
+   the query hits keep their retrieval order; with the optional sbert backend
+   (`MEDSCREEN_EMBED_BACKEND=sbert`) they are re-ranked by semantic relevance so the most
+   relevant 20 are judged, with vectors cached in DuckDB (shared with the validation harness) and
+   the model running on GPU when available.
 4. Judge stance: an LLM labels each candidate supporting, refuting, or neutral toward the claim.
 5. Score: combine those labels with each study's evidence tier into a per-claim verdict. Every
    claim is scored, but the paper's verdict and score come from its single most damning claim.
@@ -124,6 +132,10 @@ medscreen-filter --input path/to/pubmed_xml_dir
 MEDSCREEN_LLM_PROVIDER=gemini MEDSCREEN_EXTRACT_BACKEND=llm \
 MEDSCREEN_STANCE_BACKEND=llm MEDSCREEN_RETRIEVER=live \
   medscreen-filter --input path/to/pubmed_xml_dir
+
+# Add MEDSCREEN_EMBED_BACKEND=sbert to re-rank query hits by semantic relevance before the
+# 20-cap (needs the `embed` extra; runs on GPU when available). MEDSCREEN_STANCE_FULLTEXT=1
+# makes the stance judge read open-access full text instead of just the abstract.
 ```
 
 Input must be PubMed/MEDLINE XML, since it carries the `CommentsCorrectionsList` links, publication
@@ -139,11 +151,13 @@ medscreen-graph            # render the evidence graph to reports/graph.html
 pytest                   # unit tests (network tests are opt-in: pytest -m live)
 ```
 
-`medscreen-run` defaults to stub backends (offline, no key). On the gold set the pipeline
-retrieves 90% of the known disproving studies and correctly recognises 85% of them as
+`medscreen-run` defaults to stub backends (offline, no key). On the original 32-claim seed the
+pipeline retrieves 90% of the known disproving studies and correctly recognises 85% of them as
 contradicting the claim. None of the 12 known-good control papers were wrongly dropped. A few
 were flagged for down-weighting instead, which is the safe and reversible action. Claim
-extraction finds 83% of the expected claims and keeps their conditions intact. What each metric
+extraction finds 83% of the expected claims and keeps their conditions intact. The gold set has
+since been doubled to 64 claims (28 reversals + 4 fabrications + 32 controls); those figures were
+measured on the original seed and re-measurement on the full set is pending. What each metric
 means, which need a real LLM backend, and the full results are in [`eval/README.md`](eval/README.md).
 
 ## 🌀 Visualization (optional)
@@ -162,3 +176,6 @@ Not built yet:
 - Strengthening the retrieval process, so contradicting and superseding evidence is surfaced more reliably. This includes LLM-driven query and topic expansion to match on meaning rather than surface wording, and approximate-nearest-neighbour indexing to replace the current brute-force cosine search.
 - Broader evaluation across more medical domains and clinical specialties.
 - Testing with a local LLM to avoid API costs during development and evaluation.
+- A human-labelled set of ordinary papers, each with an expected keep / down-weight / drop
+  label, to give an end-to-end accuracy and false-positive number on the kind of papers the
+  filter will actually see (the current gold set targets known reversals, the easy tail).

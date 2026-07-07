@@ -16,18 +16,39 @@ Retrieval is tuned so a known refutation actually comes back:
 
 - Several searches per claim, unioned: a broad one (intervention + outcome), one limited to
   strong study types (meta-analyses, reviews, RCTs, guidelines), one looking for contradiction
-  (`risk`, `harm`, `no benefit`), a retraction-targeted one (intervention + retracted-publication
-  filter, so link expansion can reach a retraction notice), and a condition-focused one
-  (intervention + population + strong study types, since a descriptive outcome over-narrows while
-  the disease name pins a landmark trial). Boolean words in a term are treated as operators and
-  each term is parenthesised so `A OR B` groups correctly.
+  (`risk`, `harm`, `no benefit`), an intervention-only high-tier one (drops the outcome, since a
+  landmark trial reliably names the intervention but often phrases the outcome differently), a
+  retraction-targeted one (intervention + retracted-publication filter, so link expansion can
+  reach a retraction notice), and a condition-focused one (intervention + population + strong
+  study types, since a descriptive outcome over-narrows while the disease name pins a landmark
+  trial). Boolean words in a term are treated as operators and each term is parenthesised so
+  `A OR B` groups correctly.
 - Two sources queried independently.
 - Optional cache: set `MEDSCREEN_QUERY_CACHE` to a file path (DuckDB) to fetch repeated searches
   once across a corpus. Unset to always search live.
 
-Embeddings (`transformation/semantic.py`) are used only to re-rank an already-fetched pool during
-validation (`recall@k`); they cannot recover a study the queries never returned. Whether the
-queries succeed is the central failure mode, and exactly what the validation measures.
+Per-claim cap and ordering. The filter caps the candidate pool at 20 per claim
+(`scraping/evidence.py`, the `limit` argument), which in turn bounds the stance LLM to at most 20
+calls per claim, so a claim that matches hundreds of papers never triggers hundreds of model
+calls. When more than 20 are found, the order that decides who survives the cap is: the paper's
+own dispute links first (retraction notices, then comment/erratum links), because those are the
+highest-signal, lowest-noise evidence a filter has and must not be crowded out; then the query
+hits fill the remaining slots. By default the query hits keep their retrieval order (the search
+APIs' own relevance sort), which is cheap and needs no model. With the optional sbert backend
+(`MEDSCREEN_EMBED_BACKEND=sbert`) the query hits are instead re-ranked by semantic similarity to
+the claim before the cap, so the top 20 sent to the stance LLM are the most relevant rather than
+the first found — which matters at scale, where a claim can match hundreds of studies but only 20
+can be judged. Vectors are cached in DuckDB and shared with the harness, so a study is embedded
+once. Accepting that some genuinely relevant study can fall outside the top 20 is a deliberate
+precision-over-recall trade: a tighter pool feeds the stance judge less noise, and the strict
+drop thresholds already reserve the destructive action for corroborated, high-tier refutation.
+
+Embeddings (`transformation/semantic.py`) only re-rank an already-fetched pool; they cannot
+recover a study the queries never returned. Whether the queries succeed is the central failure
+mode, and exactly what the validation measures. When `sbert` is selected, both the filter (to
+pick the top 20 query hits per claim) and the harness (for `recall@k` and stance selection) use
+the same DuckDB embedding cache, so each study is embedded once and reused across both. It runs
+on the GPU when one is present.
 
 The stance judge then reads only each candidate's title and abstract, never its full text. This
 is a deliberate cost trade-off: abstracts are cheap to fetch and short to send to the model, but
@@ -127,7 +148,12 @@ good-faith science superseded by a newer study (found by keyword/high-tier searc
 `fabrication` is retracted misconduct whose disproving evidence is the retraction notice
 (found via the retraction link). That is a separate path, reached by a retraction-targeted query.
 
-> Status: retrieval recall is 90% (18 of 20 reversed) on the gold slice (16 reversals +
+> Note on the numbers below: the gold set was doubled to 64 claims (28 reversals + 4
+> fabrications + 32 controls). The recall/stance figures here were measured on the original
+> 32-claim seed (16 reversals + 4 fabrications + 12 controls); re-measurement on the full set is
+> pending and will refresh them.
+>
+> Status: retrieval recall is 90% (18 of 20 reversed) on the original seed (16 reversals +
 > 4 fabrications + 12 controls), measured model-free via `medscreen-build-cache` +
 > `medscreen-run --use-cache`. Two misses remain. The peptic-ulcer etiology reversal shares only
 > the disease with its refutation ("stress and acid" vs "H. pylori"), so no keyword or MeSH query

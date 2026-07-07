@@ -11,6 +11,7 @@ XML only. This source is queried to find studies that contradict or debate a cla
 from __future__ import annotations
 
 import json
+from xml.etree import ElementTree
 
 import httpx
 
@@ -20,6 +21,7 @@ from .http import generic_throttle, get_with_retry, make_client
 from .querycache import get_query_cache
 
 _SEARCH = "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
+_FULLTEXT = "https://www.ebi.ac.uk/europepmc/webservices/rest/{pmcid}/fullTextXML"
 
 
 class EuropePMCSource:
@@ -89,7 +91,82 @@ def parse_search_json(payload: dict) -> list[Candidate]:
                 abstract=rec.get("abstractText", "") or "",
                 pub_types=[p for p in pub_types if p],
                 year=year,
+                pmcid=rec.get("pmcid"),
+                is_open_access=rec.get("isOpenAccess") == "Y",
                 retrieved_by=[],
             )
         )
     return out
+
+
+# Body sections that add tokens without stance signal. References, tables, and figures are
+# dropped so the full text the judge reads is the study's own argument, not its bibliography.
+_JATS_SKIP = {"ref-list", "table-wrap", "fig", "table", "back"}
+# JATS elements whose text carries the narrative: paragraphs and section headings.
+_JATS_TEXT = {"p", "title"}
+
+
+def _local_name(tag: str) -> str:
+    """Strip any XML namespace so JATS elements match whether or not one is declared."""
+    return tag.rsplit("}", 1)[-1]
+
+
+def _collect_jats_text(element: ElementTree.Element, parts: list[str]) -> None:
+    for child in element:
+        name = _local_name(child.tag)
+        if name in _JATS_SKIP:
+            continue
+        if name in _JATS_TEXT:
+            text = " ".join("".join(child.itertext()).split())
+            if text:
+                parts.append(text)
+        else:
+            _collect_jats_text(child, parts)
+
+
+def extract_jats_body(xml_text: str) -> str:
+    """Extract readable body text from a JATS full-text XML document. Pure and unit-testable.
+
+    Concatenates the article body's paragraphs and section headings, skipping references,
+    tables, and figures. Returns an empty string if the document has no parseable body, so the
+    caller falls back to the abstract.
+    """
+    try:
+        root = ElementTree.fromstring(xml_text)
+    except ElementTree.ParseError:
+        return ""
+    body = next((el for el in root.iter() if _local_name(el.tag) == "body"), None)
+    if body is None:
+        return ""
+    parts: list[str] = []
+    _collect_jats_text(body, parts)
+    return "\n".join(parts)
+
+
+def fetch_full_text(candidate: Candidate, *, client: httpx.Client) -> str:
+    """Fetch a candidate's full text from the Europe PMC open-access subset.
+
+    Returns the body text, or an empty string when the article is not open access, has no
+    PMCID, or the request fails. A non-OA article has no fetchable full text, so the caller
+    keeps the abstract rather than treating the miss as an error.
+    """
+    if not candidate.pmcid or not candidate.is_open_access:
+        return ""
+    url = _FULLTEXT.format(pmcid=candidate.pmcid)
+    try:
+        r = get_with_retry(client, url, {}, throttle=generic_throttle)
+    except httpx.HTTPError:
+        return ""
+    return extract_jats_body(r.text)
+
+
+def enrich_full_text(candidates: list[Candidate], *, client: httpx.Client) -> list[Candidate]:
+    """Populate ``full_text`` in place on the open-access candidates. Returns the same list.
+
+    Only open-access candidates with a PMCID are fetched; the rest keep an empty ``full_text``
+    and are judged on their abstract. Fetches are network-bound, not LLM calls.
+    """
+    for c in candidates:
+        if c.pmcid and c.is_open_access and not c.full_text:
+            c.full_text = fetch_full_text(c, client=client)
+    return candidates

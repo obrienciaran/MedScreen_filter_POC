@@ -20,6 +20,7 @@ is still correct when used on its own, independent of that upstream fast path.
 from __future__ import annotations
 
 import os
+import threading
 
 from ..base.retriever import Retriever
 from ..schema import Candidate, ExtractedClaim, PaperRecord
@@ -59,18 +60,82 @@ def _synthetic_candidate(pmid: str, ref_type: str, paper: PaperRecord) -> Candid
 
 
 class LiveRetriever:
-    """Network retriever reusing the Source providers plus the paper's dispute links."""
+    """Network retriever reusing the Source providers plus the paper's dispute links.
+
+    When sbert ranking is selected (``MEDSCREEN_EMBED_BACKEND=sbert``), the query hits are
+    re-ranked by semantic similarity to the claim before the pool is capped, so the top ``limit``
+    sent to the stance LLM are the most relevant rather than merely the first found. This matters
+    at scale, where a claim can match hundreds of studies but only ``limit`` can be judged. Each
+    candidate's vector is cached in DuckDB (the same store the harness uses), so a study is
+    embedded once and reused across claims, papers, and the harness. Off by default: with the stub
+    embedder the pool keeps its cheap link-then-source order and no model is loaded.
+    """
 
     name = "live"
 
+    def __init__(self) -> None:
+        self._rerank = os.environ.get("MEDSCREEN_EMBED_BACKEND", "stub").lower() == "sbert"
+        self._embedder = None  # lazily loaded on first use (heavy model)
+        self._store = None  # shared DuckDB embedding cache
+        self._lock = threading.Lock()  # serialises the model and the DuckDB connection
+
+    def _rank_query_hits(self, claim: ExtractedClaim, candidates: list[Candidate]) -> list[Candidate]:
+        """Order query-hit candidates by semantic similarity to the claim, most relevant first.
+
+        Vectors are read from and written to the shared DuckDB embedding cache under a lock (the
+        model and the DuckDB connection are single-threaded), so each study is embedded once.
+        """
+        if len(candidates) <= 1:
+            return candidates
+        from ..store import DEFAULT_DB, Store
+        from ..transformation.semantic import get_embedder, rank_by_similarity
+
+        n = claim.normalized
+        claim_text = " ".join(
+            t for t in (claim.claim_text, n.intervention, n.outcome, n.population) if t
+        ).strip()
+        with self._lock:
+            if self._embedder is None:
+                self._embedder = get_embedder()
+                self._store = Store(os.environ.get("MEDSCREEN_EMBED_DB", str(DEFAULT_DB)))
+            model = self._embedder.name
+            vec_by_id: dict[str, list[float]] = {}
+            to_embed: list[Candidate] = []
+            for c in candidates:
+                cached = self._store.get_embedding(c.ext_id, model)
+                if cached is None:
+                    to_embed.append(c)
+                else:
+                    vec_by_id[c.ext_id] = cached
+            if to_embed:
+                for c, vec in zip(to_embed, self._embedder.embed(
+                    [f"{c.title} {c.abstract}" for c in to_embed]
+                )):
+                    self._store.upsert_embedding(c.ext_id, model, vec)
+                    vec_by_id[c.ext_id] = vec
+            claim_vec = self._embedder.embed([claim_text])[0]
+        ranked = rank_by_similarity(
+            claim_vec, [(c.ext_id, vec_by_id[c.ext_id]) for c in candidates if c.ext_id in vec_by_id]
+        )
+        order = {ext_id: i for i, (ext_id, _) in enumerate(ranked)}
+        return sorted(candidates, key=lambda c: order.get(c.ext_id, len(candidates)))
+
     def retrieve(self, paper: PaperRecord, claim: ExtractedClaim, *, limit: int = 20) -> list[Candidate]:
+        from .europepmc import enrich_full_text
         from .http import make_client
         from .pubmed import efetch
         from .sources import get_sources
 
-        # A retraction notice is the strongest offline refutation, so it must never be cut by
-        # the limit. Fetch retraction links first and keep them ahead of the query hits; other
-        # dispute links and source results then fill the remaining slots up to limit.
+        # Cap and ordering. The pool is capped at `limit` candidates per claim (default 20), which
+        # also bounds the downstream stance LLM calls to at most `limit` per claim. When a claim
+        # matches more than `limit` candidates, the order that decides who survives the cap is:
+        #   1. the paper's own dispute links, retraction notices first (the strongest refutation)
+        #      then comment/erratum links, so this highest-signal, lowest-noise evidence is never
+        #      truncated by query-hit volume;
+        #   2. query hits from the sources, in source order, filling the remaining slots.
+        # Query hits are deliberately NOT re-ranked by semantic similarity: that ranking is noisy
+        # and would need an embedder or vector index the filter avoids, so cheap and auditable
+        # link-then-query order is preferred over an uncertain relevance sort.
         retraction_pmids = [
             pmid for rt in _REFUTING_REFTYPES for pmid in paper.comments_corrections.get(rt, [])
         ]
@@ -78,10 +143,12 @@ class LiveRetriever:
             pmid for rt in DISPUTE_REFTYPES if rt not in _REFUTING_REFTYPES
             for pmid in paper.comments_corrections.get(rt, [])
         ]
+        # Retraction ahead of comment/erratum, de-duplicated while preserving that order.
+        dispute_pmids = list(dict.fromkeys(retraction_pmids + other_dispute_pmids))
         priority: dict[str, Candidate] = {}
         others: dict[str, Candidate] = {}
         with make_client() as client:
-            for c in efetch(retraction_pmids, client=client):
+            for c in efetch(dispute_pmids, client=client):
                 c.retrieved_by = sorted(set(c.retrieved_by) | {"links"})
                 priority[c.ext_id] = c
             for source in get_sources():
@@ -94,11 +161,19 @@ class LiveRetriever:
                 for c in found:
                     if c.ext_id not in priority:
                         others.setdefault(c.ext_id, c)
-            for c in efetch(other_dispute_pmids, client=client):
-                if c.ext_id not in priority:
-                    c.retrieved_by = sorted(set(c.retrieved_by) | {"links"})
-                    others[c.ext_id] = c
-        return (list(priority.values()) + list(others.values()))[:limit]
+            # Dispute links always lead and are never cut. Query hits fill the remaining slots;
+            # when sbert ranking is on, order them by semantic relevance to the claim first so the
+            # top `limit` are the most relevant, not just the first found.
+            query_hits = list(others.values())
+            if self._rerank:
+                query_hits = self._rank_query_hits(claim, query_hits)
+            result = (list(priority.values()) + query_hits)[:limit]
+            # Full-text stance is opt-in (network cost). Enrich only the returned pool, and
+            # inside the client's lifetime, so the stance judge reads the body where the study
+            # is in the open-access subset and the abstract otherwise.
+            if os.environ.get("MEDSCREEN_STANCE_FULLTEXT") == "1":
+                enrich_full_text(result, client=client)
+        return result
 
 
 def get_retriever() -> Retriever:
