@@ -78,5 +78,5 @@ htmlcov/
 .DS_Store
 Thumbs.db
 
-# Integration findings and analysis (local, not committed)
+# Integration findings and analysis
 MEDMINT_INTEGRATION_FINDINGS.md
