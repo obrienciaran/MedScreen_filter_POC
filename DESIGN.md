@@ -63,7 +63,10 @@ across all the retrieved evidence, and held to strict drop thresholds.
 1. Weigh each study by its publication-type evidence tier (guideline 1.0, retraction 0.95,
    systematic review 0.9, meta-analysis 0.85, RCT 0.8, observational 0.5, case report 0.2, else
    0.4). Its pull on a claim is that tier × the model's stance confidence.
-2. Score the claim. Starting at 0.5, supporting evidence raises the score and refuting evidence
+2. Score the claim. First drop any refutation the judge marked off-scope (`condition_match`
+   false, meaning the study tested a different population, dose, comparator, or setting than the
+   claim): it refutes a different claim and is not evidence against this one. Starting at 0.5,
+   supporting evidence raises the score and refuting evidence
    lowers it (refutation weighs about twice as much). Both sides are combined across all the
    studies found, not read off the single strongest one. The strongest study sets the base, and
    each further study that agrees adds a smaller amount on top. So a consistent body of evidence
@@ -129,9 +132,13 @@ Four measures, each in plain English, with the result on the full set:
   (29 of 32). This hands the study to the judge regardless of rank, to test the judge alone; the
   end-to-end figure that respects the top-20 cap is **78%** (equal to recall@20). So the limit here
   is ranking, not the judge.
-- **False-contradiction rate** — how often a still-true control picks up any refuting label. **47%**
-  (15 of 32), but none is dropped: the strict thresholds turn each into a reversible down-weight, so
-  the false-drop rate on controls is **0 of 32** (of the 32 reversals, 13 drop and 19 down-weight).
+- **False-contradiction rate** — how often a still-true control keeps a refuting label the scorer
+  actually counts. The scope-aware rate is **25%** (8 of 32): the scorer discards refutations the
+  judge flagged as off-scope (`condition_match` false), so a control refuted only by an off-scope
+  study is no longer counted. The raw rate, keeping every refuting label including the off-scope
+  ones, is **47%** (15 of 32) and is reported alongside for honesty. Either way none is dropped: the
+  strict thresholds turn each flag into a reversible down-weight, so the false-drop rate on controls
+  is **0 of 32** (of the 32 reversals, 13 drop and 19 down-weight).
 
 Two reversals are missed and accepted as limitations: peptic ulcers (the refutation shares only the
 disease, "stress and acid" vs "H. pylori") and vertebroplasty (the landmark trial is buried among

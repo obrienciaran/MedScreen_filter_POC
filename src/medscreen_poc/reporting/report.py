@@ -51,7 +51,8 @@ def _render_md(
         f"| Stance recall (conditional) | {pct(m.stance_recall_conditional)} | of retrieved answer-key docs, fraction recognized as refuting |",
         f"| Stance recall (overall) | {pct(m.stance_recall_overall)} | retrieval and stance combined |",
         f"| Soft refutation recall | {pct(m.soft_refutation_recall)} | any refuting doc found (stance-dependent, softer) |",
-        f"| **False-contradiction rate** | **{pct(m.false_contradiction_rate)}** | controls wrongly flagged contradicted (lower is better) |",
+        f"| **False-contradiction rate (scope-aware)** | **{pct(m.false_contradiction_rate_scoped)}** | controls kept an on-scope refuter (lower is better) |",
+        f"| False-contradiction rate (raw) | {pct(m.false_contradiction_rate)} | controls with any refuter, including off-scope ones the scorer discards |",
         "",
         "## Failure taxonomy (reversed claims that missed)",
         "",
@@ -105,6 +106,7 @@ def _write_csv(path: Path, gold: GoldSet, reports: list[ClaimReport]) -> None:
             "claim_id", "claim_text", "status", "n_candidates", "answer_key_retrieved",
             "answer_key_rank", "answer_key_recognized", "refuting_found",
             "top_refuting_tier", "failure_bucket", "false_contradiction",
+            "false_contradiction_scoped",
         ])
         for r in reports:
             g = by_id.get(r.claim_id)
@@ -112,5 +114,5 @@ def _write_csv(path: Path, gold: GoldSet, reports: list[ClaimReport]) -> None:
                 r.claim_id, g.claim_text if g else "", r.status.value, r.n_candidates,
                 r.answer_key_retrieved, r.answer_key_rank or "", r.answer_key_recognized,
                 r.refuting_found, f"{r.top_refuting_tier:.2f}", r.failure_bucket.value,
-                r.false_contradiction,
+                r.false_contradiction, r.false_contradiction_scoped,
             ])

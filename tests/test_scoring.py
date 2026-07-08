@@ -171,6 +171,55 @@ def test_volume_of_low_tier_refuters_does_not_force_a_drop():
     assert cv.verdict is Verdict.CONTESTED
 
 
+def test_offscope_refuter_is_excluded_so_control_stays_supported():
+    # A study the judge flagged as off-scope (condition_match=False) refutes a different claim,
+    # not this one, so it is dropped from the tally. Support-plus-off-scope-refuter, the shape of
+    # a wrongly down-weighted control, keeps rather than down-weights.
+    claim = _claim()
+    cands = [_cand("S", ["Meta-Analysis"]), _cand("R", ["Randomized Controlled Trial"])]
+    labels = [
+        StanceLabel(claim_id=claim.claim_id, candidate_ext_id="S", stance=Stance.SUPPORTS, confidence=0.8),
+        StanceLabel(claim_id=claim.claim_id, candidate_ext_id="R", stance=Stance.REFUTES,
+                    confidence=0.9, condition_match=False),
+    ]
+    cv = score_claim(claim, cands, labels)
+    assert cv.verdict is Verdict.SUPPORTED
+    assert cv.n_refuting == 0
+    assert cv.refuting_pmids == []
+    assert score_paper(PaperRecord(pmid="1"), [cv]).action is Action.KEEP
+
+
+def test_onscope_refuter_with_none_condition_match_still_counts():
+    # condition_match=None means the judge did not say; only an explicit False is off-scope, so a
+    # None refuter is kept as evidence and still contests the claim.
+    claim = _claim()
+    cands = [_cand("S", ["Meta-Analysis"]), _cand("R", ["Randomized Controlled Trial"])]
+    labels = [
+        StanceLabel(claim_id=claim.claim_id, candidate_ext_id="S", stance=Stance.SUPPORTS, confidence=0.8),
+        StanceLabel(claim_id=claim.claim_id, candidate_ext_id="R", stance=Stance.REFUTES,
+                    confidence=0.9, condition_match=None),
+    ]
+    cv = score_claim(claim, cands, labels)
+    assert cv.verdict is Verdict.CONTESTED
+    assert cv.n_refuting == 1
+
+
+def test_onscope_refuters_are_not_excluded():
+    # Two on-scope (condition_match=True) high-tier refutations are genuine disproving evidence
+    # and still drop the claim, so the exclusion does not weaken real reversals.
+    claim = _claim()
+    cands = [_cand("R1", ["Randomized Controlled Trial"]), _cand("R2", ["Meta-Analysis"])]
+    labels = [
+        StanceLabel(claim_id=claim.claim_id, candidate_ext_id="R1", stance=Stance.REFUTES,
+                    confidence=0.9, condition_match=True),
+        StanceLabel(claim_id=claim.claim_id, candidate_ext_id="R2", stance=Stance.REFUTES,
+                    confidence=0.9, condition_match=True),
+    ]
+    cv = score_claim(claim, cands, labels)
+    assert cv.verdict is Verdict.REFUTED
+    assert cv.n_refuting == 2
+
+
 def test_paper_judged_by_most_damning_claim():
     good = score_claim(
         _claim(), [_cand("S", ["Meta-Analysis"])],

@@ -41,9 +41,11 @@ higher than recall@20 (78%): 4 reversed claims had the disproving study retrieve
 accuracy given the study reaches it, and 78% is the end-to-end catch rate through the ranking cap.
 The bottleneck here is ranking, not the judge.
 
-False-contradiction rate is the fraction of still-true control papers where any candidate was
-labelled refuting. It guards precision, because a harness that flags everything has perfect recall
-and no value.
+False-contradiction rate is the fraction of still-true control papers wrongly flagged as
+contradicted. It guards precision, because a harness that flags everything has perfect recall
+and no value. It is reported two ways: the scope-aware rate counts only refutations the scorer
+keeps (it discards ones the judge marked off-scope, `condition_match` false), and the raw rate
+keeps every refuting label, off-scope included.
 
 Failure taxonomy records, for each miss, why it missed: `not_indexed`, `entity_miss`,
 `retrieved_not_recognized`, `condition_mismatch`, or `tier_inversion`.
@@ -76,7 +78,8 @@ half it applies to, so the denominators are 32, not 64. The model, where one is 
 | Disproving study found by the search | 94% (30 of 32 wrong) | No |
 | That study ranked in the top 20 | 78% (25 of 32 wrong) | No |
 | Judge reads the study as refuting, once shown | 91% (29 of 32 wrong) | Yes |
-| True controls picking up a refuting label | 47% (15 of 32 true) | Yes |
+| True controls flagged, scope-aware (off-scope refuters discarded) | 25% (8 of 32 true) | Yes |
+| True controls picking up any refuting label (raw) | 47% (15 of 32 true) | Yes |
 | True controls wrongly dropped | 0 of 32 true | Yes |
 | Wrong claims caught (dropped or down-weighted) | 32 of 32 wrong | Yes |
 | Claims correctly extracted | 83% | Yes |
@@ -88,11 +91,13 @@ How to read the rows:
 - **Ranked in the top 20** matters because only the 20 most relevant studies per claim are sent to
   the judge; a study ranked lower is found but never judged. This, not the judge, is the real limit:
   when the disproving study does reach the judge, it is read as refuting 91% of the time.
-- **Refuting label on a control** is high (47%) because ordinary true claims pull in near-miss
-  studies about a different population or dose, which the judge, reading only the abstract, over-reads
-  as a contradiction. It never turns into a drop: dropping a paper takes two independent strong
-  studies that agree, so every over-flagged control is down-weighted (reversible), not deleted. Of
-  the 32 wrong claims, 13 are dropped and 19 down-weighted.
+- **Refuting label on a control** is high in the raw form (47%) because ordinary true claims pull in
+  near-miss studies about a different population or dose, which the judge, reading only the abstract,
+  over-reads as a contradiction. The judge itself flags most of these as off-scope
+  (`condition_match` false), and the scorer discards those, which is why the scope-aware rate is far
+  lower (25%). Even the remaining flags never turn into a drop: dropping a paper takes two
+  independent strong studies that agree, so every over-flagged control is down-weighted (reversible),
+  not deleted. Of the 32 wrong claims, 13 are dropped and 19 down-weighted.
 
 Two wrong claims are missed, and both are accepted limits. In one, the claim and its refutation
 share only the topic (peptic ulcers, overturned by *H. pylori*). In the other, the overturning

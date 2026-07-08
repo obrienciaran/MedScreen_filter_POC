@@ -49,6 +49,15 @@ DROP_MIN_REFUTERS = 2  # a drop needs corroboration, not a single study
 # back to the old single-strongest-pull behaviour.
 CORROBORATION_WEIGHT = 0.5
 
+# Off-scope refutations are not evidence against the claim as asserted. The stance judge marks a
+# study ``condition_match=False`` when it addresses a different population, dose, comparator, or
+# setting than the claim (for example an adult-ARDS trial "refuting" a claim about neonatal RDS).
+# Such a study refutes a different claim, so it is dropped from the tally before scoring rather
+# than counted as a full-strength refutation, which was the main source of wrongly down-weighted
+# controls. This is strict ``is False`` only: ``None`` means the judge did not say and stays as
+# evidence. Supporting labels are never dropped this way; only off-scope refutations are removed.
+EXCLUDE_OFFSCOPE_REFUTERS = True
+
 # Default action per verdict. Neutral is kept, because a missing refutation when neutral
 # evidence *was* found is not proof of falsity. Ungrounded is different: no evidence was found
 # at all, so the claim has no corroboration in the literature. That is its own signal and is
@@ -67,6 +76,11 @@ def score_claim(
     claim: ExtractedClaim, candidates: list[Candidate], labels: list[StanceLabel]
 ) -> ClaimVerdict:
     """Weigh one claim's evidence into a verdict and a 0..1 truthfulness score."""
+    if EXCLUDE_OFFSCOPE_REFUTERS:
+        labels = [
+            l for l in labels
+            if not (l.stance is Stance.REFUTES and l.condition_match is False)
+        ]
     tier = {c.ext_id: c.evidence_tier for c in candidates}
     refuting = [l for l in labels if l.stance is Stance.REFUTES]
     supporting = [l for l in labels if l.stance is Stance.SUPPORTS]

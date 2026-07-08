@@ -184,6 +184,11 @@ class ClaimReport(BaseModel):
     failure_bucket: FailureBucket = FailureBucket.NONE
     # for controls: did we wrongly flag contradiction?
     false_contradiction: bool = False
+    # Scope-aware variant: a control counts as wrongly flagged only when a refuter the judge did
+    # NOT mark off-scope (condition_match is not False) was found. Off-scope refutations refute a
+    # different claim, so they are excluded here just as scoring.py excludes them from the verdict.
+    # The raw false_contradiction above is kept alongside it for honesty.
+    false_contradiction_scoped: bool = False
 
 
 # The data filter, the project's end goal, scores whole PubMed papers, not just the

@@ -37,7 +37,7 @@ or override it. The full column list is:
 
 `pmid`, `title`, `verdict`, `score`, `action`, `verdict_basis`, `refutation_timing`, `grounded`,
 `n_claims`, `n_refuted_claims`, `top_refuting_tier`, `refuting_confidence`, `claim_scores`,
-`refuting_pmids`, `notes`. The main `README.md` documents each one. The verdict, action, score, and
+`refuting_pmids`, `evidence_text_source`, `notes`. The main `README.md` documents each one. The verdict, action, score, and
 evidence tier are explained below.
 
 ### `verdict`

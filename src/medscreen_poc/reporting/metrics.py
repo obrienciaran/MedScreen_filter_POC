@@ -28,8 +28,10 @@ class Metrics(BaseModel):
     stance_recall_conditional: float  # among reversed where answer-key was retrieved
     stance_recall_overall: float  # over all reversed
     soft_refutation_recall: float  # any refuting doc found (softer, stance-dependent)
-    # control quality
+    # control quality. The scoped rate excludes off-scope refutations (condition_match is False),
+    # matching what the scorer counts; the raw rate keeps every refuter and is reported alongside.
     false_contradiction_rate: float
+    false_contradiction_rate_scoped: float
     # diagnosis
     failure_taxonomy: dict[str, int]
 
@@ -53,6 +55,7 @@ def compute(reports: list[ClaimReport]) -> Metrics:
     soft_refutation_recall = _mean(r.refuting_found for r in reversed_)
 
     false_contradiction_rate = _mean(r.false_contradiction for r in controls)
+    false_contradiction_rate_scoped = _mean(r.false_contradiction_scoped for r in controls)
 
     taxonomy = Counter(r.failure_bucket.value for r in reversed_ if r.failure_bucket is not FailureBucket.NONE)
 
@@ -65,6 +68,7 @@ def compute(reports: list[ClaimReport]) -> Metrics:
         stance_recall_overall=stance_recall_overall,
         soft_refutation_recall=soft_refutation_recall,
         false_contradiction_rate=false_contradiction_rate,
+        false_contradiction_rate_scoped=false_contradiction_rate_scoped,
         failure_taxonomy=dict(taxonomy),
     )
 

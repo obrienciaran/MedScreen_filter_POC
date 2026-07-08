@@ -187,6 +187,9 @@ def run_claim(
 
     refuting = [l for l in labels if l.stance is Stance.REFUTES]
     refuting_found = bool(refuting)
+    # On-scope refuters only: the scorer discards refutations the judge marked off-scope
+    # (condition_match is False), so the scope-aware control metric must do the same.
+    refuting_onscope_found = any(l.condition_match is not False for l in refuting)
     answer_key_recognized = any(l.candidate_ext_id in answer_set for l in refuting)
     top_refuting_tier = max(
         (by_id[l.candidate_ext_id].evidence_tier for l in refuting), default=0.0
@@ -202,6 +205,9 @@ def run_claim(
             answer_key_recognized, refuting_found, top_refuting_tier, answer_set,
         ),
         false_contradiction=(gold.status is ClaimStatus.STILL_TRUE and refuting_found),
+        false_contradiction_scoped=(
+            gold.status is ClaimStatus.STILL_TRUE and refuting_onscope_found
+        ),
     )
     return report, labels
 

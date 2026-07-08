@@ -82,6 +82,10 @@ claim, then rolls up to the paper.
   case report 0.2, anything else 0.4). A study's pull on a claim is its tier times the stance
   judge's confidence. The stance judge reads only each study's title and abstract, not full text
   (a deliberate cost trade-off).
+- Refutations the stance judge flagged off-scope (`condition_match is False`: a different
+  population, dose, comparator, or setting than the claim) are excluded before scoring, since an
+  off-scope study refutes a different claim. Supporting labels are not excluded this way. The
+  toggle is `EXCLUDE_OFFSCOPE_REFUTERS` in `scoring.py`.
 - A claim's 0 to 1 score starts at 0.5, rises with aggregated supporting evidence, and falls with
   aggregated refuting evidence (refutation weighs roughly twice as much). The aggregate is not
   just the single strongest study: the strongest sets the floor, then each further agreeing study
@@ -105,7 +109,8 @@ fail, then reports the percentage that pass.
   judge labelled as refuting.
 - Recall@k: fraction of reversed claims whose disproving study ranked in the top k by semantic
   similarity. False-contradiction rate: fraction of still-true controls wrongly flagged as
-  refuted (lower is better).
+  refuted (lower is better), reported both scope-aware (off-scope refuters excluded, matching the
+  scorer) and raw (every refuting label).
 - Error taxonomy per miss: not_indexed, retrieved_not_recognized, entity_miss,
   condition_mismatch, tier_inversion.
 
@@ -182,8 +187,8 @@ the studies that overturned them (the known disproving studies). Controls carry 
 those PMIDs were verified against PubMed esummary/efetch. It holds 64 claims (28 reversals + 4
 fabrications + 32 controls), doubled from an earlier seed of half the size. It is the most
 accuracy-critical artifact, so change it with care. The headline recall/stance metrics in the
-docs were re-measured on the full 64-claim set (94% retrieval recall, 91% stance recall, 47%
-false-contradiction rate, 0 of 32 controls dropped).
+docs were re-measured on the full 64-claim set (94% retrieval recall, 91% stance recall, 25%
+scope-aware false-contradiction rate / 47% raw, 0 of 32 controls dropped).
 
 ### Invariants
 

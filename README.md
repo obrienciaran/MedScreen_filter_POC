@@ -9,28 +9,28 @@ at a corpus of PubMed papers (XML) and it produces a flat table, one row per pap
 whether each paper's claims hold up against trusted medical evidence. Downstream training can then
 keep, down-weight, or drop papers based on that table.
 
-The goal is to keep only high-quality data. It is a form of rejection sampling for a training
-corpus: check each paper's claims, keep the ones that survive, and drop or down-weight the rest.
-Because it checks claims against current evidence and publication dates, it naturally favours newer
-findings that overturn older ones, so a paper repeating a claim that has since been reversed gets
-caught.
+The goal is to keep only high-quality data. It checks each paper's claims, keeps the ones that
+hold up against the evidence, and drops or down-weights the rest. Because it checks claims against
+current evidence and publication dates, it favours newer findings that overturn older ones, so a
+paper repeating a claim that has since been reversed gets caught.
 
 Rule-based filters and LLM raters judge a paper by how it reads, which is what confident
 misinformation imitates best. This filter checks each claim against retrieved evidence instead.
 
 Early testing with a lightweight LLM (Gemini 2.5 Flash Lite, POC only) shows evidence retrieval can underperform direct LLM judgment. 
 
-**Pros:**
-- Transparent: verdicts show which papers ground each decision
-- Temporal: catches reversals and retracted work via publication dates
-- Auditable: reasoning chain can be verified
+**Strengths**
+- Every verdict shows the studies it was based on, so a decision can be checked.
+- It uses publication dates, so it catches claims that later work has overturned, and papers that were later retracted.
+- The full chain of reasoning can be audited.
 
-**Cons:**
-- Query precision: retrieval can be too broad and add noise
-- Stance judgment: LLM confidence decreases on real papers vs. synthetic test cases
-- Retraction signals: formal retractions may not be consistently retrieved or scored
+**Weaknesses**
+- The search can be too broad and pull in studies that are not really about the claim.
+- The model is less sure when judging real papers than the synthetic test cases, so its stance calls are weaker in practice.
+- Formal retractions are not always found or scored correctly.
 
-This is experimental code. Before production use, stance judgment and query precision require improvement.
+This is experimental code. The search precision and the model's stance judgment both need work
+before it is used in production.
 
 ## ➡️ What it produces
 
@@ -141,14 +141,14 @@ MedScreen on its own terms:
 | Disproving study found by the search | 94% (30 of 32 wrong) |
 | Wrong claims caught (dropped or down-weighted) | 32 of 32 wrong |
 | True claims wrongly dropped | 0 of 32 true |
-| True claims down-weighted instead (reversible) | 15 of 32 true |
+| True claims down-weighted, not dropped | 8 of 32 true |
 | Claims correctly extracted | 83% |
 
-Same model on both sides, so it is like-for-like. From memory the model misses a fabrication and a
-retraction it was never taught; MedScreen catches both by reading the retraction notice and the
-overturning trial from the evidence. The trade-off is precision: it down-weights 15 true claims
-where the model keeps all 32, but it never deletes a true claim, because dropping a paper takes two
-independent strong studies that agree.
+Same model on both sides, so it is a fair comparison. Working from memory, the model misses a
+fabrication and a retraction it was never taught. MedScreen catches both by reading the retraction
+notice and the overturning trial from the evidence. The cost is lower precision. MedScreen
+down-weights 8 true claims where the model keeps all 32, but it never deletes a true claim, because
+dropping a paper needs two independent strong studies to agree.
 
 Full numbers are in [`eval/README.md`](eval/README.md); the [design notes](DESIGN.md) define each
 measure in plain English.
