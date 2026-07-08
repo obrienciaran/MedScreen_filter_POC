@@ -182,7 +182,8 @@ the studies that overturned them (the known disproving studies). Controls carry 
 those PMIDs were verified against PubMed esummary/efetch. It holds 64 claims (28 reversals + 4
 fabrications + 32 controls), doubled from an earlier seed of half the size. It is the most
 accuracy-critical artifact, so change it with care. The headline recall/stance metrics in the
-docs were measured on the original 32-claim seed; re-measurement on the full set is pending.
+docs were re-measured on the full 64-claim set (94% retrieval recall, 91% stance recall, 47%
+false-contradiction rate, 0 of 32 controls dropped).
 
 ### Invariants
 
@@ -232,3 +233,4 @@ First consider clarity and simplicity. If architecture changes must be made to t
 - Read existing files before writing any output.
 - Do not re-read files unless they have been changed.
 - Avoid AI style language like the overuse of emdashes or semi-colons, or overuse of patterns like "not x, but y" or "short label: longer explanation", or typical AI phrases like "honest review", "here's the catch", or "pragmatic approach".
+- Keep the readme up-to-date and avoid language patterns like "recently", "so far", "the new results", "the expanded data". It should always reflect the present state.

@@ -28,35 +28,20 @@ Retrieval is tuned so a known refutation actually comes back:
   once across a corpus. Unset to always search live.
 
 Per-claim cap and ordering. The filter keeps at most 20 candidate studies per claim
-(`scraping/evidence.py`, the `limit` argument). This also caps the stance model at 20 calls per
-claim, so a claim that matches hundreds of papers never triggers hundreds of model calls. When
-more than 20 are found, the paper's own dispute links come first (retraction notices, then
-comment/erratum links), since those are the strongest and cleanest evidence a filter has. The
-query hits fill the remaining slots. By default they keep the order the search APIs returned them
-in, which is free and needs no model. With the optional sbert backend
-(`MEDSCREEN_EMBED_BACKEND=sbert`) they are re-ranked by how close they are in meaning to the claim
-before the cap, so the 20 sent to the stance model are the most relevant rather than the first
-found. This matters at scale, where a claim can match hundreds of studies but only 20 can be
-judged. Vectors are cached in DuckDB and shared with the test harness, so each study is embedded
-once. A genuinely relevant study can fall outside the top 20. The filter accepts that to keep the
-pool tight and the stance judge's input clean, and the strict drop thresholds already reserve the
-drop action for well-supported, high-tier refutation.
+(`scraping/evidence.py`), which also caps the stance model at 20 calls per claim so a claim
+matching hundreds of papers never triggers hundreds of model calls. The paper's own dispute links
+(retraction notices, then comment/erratum links) fill the first slots, since those are the
+strongest evidence a filter has; query hits fill the rest. By default query hits keep the order the
+search APIs returned (free, no model). With the optional sbert backend
+(`MEDSCREEN_EMBED_BACKEND=sbert`) they are re-ranked by meaning before the cap, so the 20 judged are
+the most relevant rather than the first found. Embeddings only re-order an already-fetched pool;
+they cannot recover a study the queries never returned, which is why retrieval, not ranking, is the
+central failure the validation measures. Vectors are cached in DuckDB, shared with the harness, and
+run on GPU when present.
 
-Embeddings (`transformation/semantic.py`) only re-rank an already-fetched pool; they cannot
-recover a study the queries never returned. Whether the queries succeed is the central failure
-mode, and exactly what the validation measures. When `sbert` is selected, both the filter (to
-pick the top 20 query hits per claim) and the harness (for `recall@k` and stance selection) use
-the same DuckDB embedding cache, so each study is embedded once and reused across both. It runs
-on the GPU when one is present.
-
-The stance judge then reads only each candidate's title and abstract, never its full text. This
-saves cost: abstracts are cheap to fetch and short to send to the model. The downside is that a
-refutation or a condition caveat found only in a paper's Results or Methods is invisible to it,
-which limits both stance recall and precision. Accepted for the POC.
-
-> Status: proof of concept. Tested on 10 PubMed papers with Gemini 2.5 Flash Lite (6 kept, 4
-> downweighted, 0 dropped; all 10 got a real verdict). Not yet run on a large or varied dataset;
-> query construction, retrieval, and scoring all need refinement before production use.
+The stance judge reads only each candidate's title and abstract, not full text. Abstracts are cheap
+to fetch and short to send, but a refutation or condition caveat stated only in a paper's Results or
+Methods is then invisible, which limits both stance recall and precision. Accepted for the POC.
 
 ## 📄 How a paper is scored
 
@@ -125,59 +110,40 @@ paper whose claims are all `supported` or `contested` shows `n_refuted_claims = 
 
 ## ❓ Validation study: can the search find the evidence?
 
-The filter is only as good as its search. A separate test (`medscreen-run`) checks that one step
-using claims the field already knows were wrong, where the disproving study is recorded in
-advance. It runs the filter's search and checks how often it finds the known study, scored in two
-stages so a failure traces to the right one:
+The filter is only as good as its search: if the disproving study is never retrieved, nothing
+downstream can use it. So a separate test (`medscreen-run`) measures exactly that, on the 64-claim
+gold set (32 reversed + 32 still-true controls) where each reversed claim's disproving study is
+recorded in advance. Reversed claims come in two kinds: a `reversal` is good-faith science later
+superseded (found by keyword/high-tier search), a `fabrication` is retracted misconduct whose
+disproving evidence is the retraction notice (reached by a retraction-targeted query).
 
-- Retrieval recall: of the disproving studies that exist, the fraction the search pulled back.
-  It does not depend on the model, so it is the main number.
-- Stance recall: of those fetched, the fraction the model labelled refuting.
-- Recall@k: retrieval recall within the top k results (k = 1, 5, 10, 20).
-- False-contradiction rate: fraction of still-true controls wrongly flagged refuted (lower is
-  better).
+Four measures, each in plain English, with the result on the full set:
 
-Each miss is tagged with a root cause (`not_indexed`, `entity_miss`, `retrieved_not_recognized`,
-`condition_mismatch`, `tier_inversion`). Results print at the end of a run and save to
-`reports/recall-<timestamp>.md` and `.csv`.
+- **Retrieval recall** — did the search pull the known disproving study into the pool at all? This
+  is model-free, so it is the headline number. **94%** (30 of 32).
+- **Recall@k** — did that study rank near the top? After retrieval the pool is sorted by how close
+  each study is in meaning to the claim; recall@k is the share of reversed claims whose disproving
+  study lands in the top k. It matters because only the top 20 reach the (paid) stance judge, so a
+  study ranked lower is found but never judged. **9 / 34 / 62 / 78%** at k = 1 / 5 / 10 / 20.
+- **Stance recall** — when the judge sees the disproving study, does it call it refuting? **91%**
+  (29 of 32). This hands the study to the judge regardless of rank, to test the judge alone; the
+  end-to-end figure that respects the top-20 cap is **78%** (equal to recall@20). So the limit here
+  is ranking, not the judge.
+- **False-contradiction rate** — how often a still-true control picks up any refuting label. **47%**
+  (15 of 32), but none is dropped: the strict thresholds turn each into a reversible down-weight, so
+  the false-drop rate on controls is **0 of 32** (of the 32 reversals, 13 drop and 19 down-weight).
 
-The gold set holds two kinds of `reversed` claim, tagged by `category`. A `reversal` is
-good-faith science superseded by a newer study (found by keyword/high-tier search). A
-`fabrication` is retracted misconduct whose disproving evidence is the retraction notice
-(found via the retraction link). That is a separate path, reached by a retraction-targeted query.
+Two reversals are missed and accepted as limitations: peptic ulcers (the refutation shares only the
+disease, "stress and acid" vs "H. pylori") and vertebroplasty (the landmark trial is buried among
+similar ones). Bridging either needs semantic query-expansion, deferred on purpose to protect
+control precision. Each miss is tagged with a root cause (`not_indexed`, `entity_miss`,
+`retrieved_not_recognized`, `condition_mismatch`, `tier_inversion`) in
+`reports/recall-<timestamp>.{md,csv}`.
 
-> Note on the numbers below: the gold set now holds 64 claims (28 reversals + 4 fabrications + 32
-> controls). The recall/stance figures here were measured on the first 32-claim version (16
-> reversals + 4 fabrications + 12 controls). Re-measuring them on the full set is still to do.
->
-> Status: retrieval recall is 90% (18 of 20 reversed) on the original seed (16 reversals +
-> 4 fabrications + 12 controls), measured model-free via `medscreen-build-cache` +
-> `medscreen-run --use-cache`. Two misses remain. The peptic-ulcer etiology reversal shares only
-> the disease with its refutation ("stress and acid" vs "H. pylori"), so no keyword or MeSH query
-> finds it without already naming the answer (bacteria). This is a known limit of keyword search
-> for conceptual reversals. The vertebroplasty reversal's landmark trial is buried among many similar
-> high-tier trials that the condition does not disambiguate. Both are accepted false negatives
-> rather than over-broadening the search and risking control precision; bridging them needs a
-> semantic query-expansion step, deferred on purpose.
->
-> The condition-focused query rung (intervention + population) added arthroscopy and PCI, whose
-> descriptive outcomes previously over-narrowed the core query. It does not raise LLM cost:
-> stance is capped at the top 20 candidates per claim and every pool already exceeds 20, so the
-> call count is unchanged; the rung only widens retrieval, which is network-bound.
->
-> Stance and precision, measured on the gold slice with sbert ranking and a real stance model
-> (Gemini 2.5 Flash Lite): 85% overall stance recall (17 of 20 answer keys recognised as
-> refuting; the misses are the two retrieval misses plus one condition-mismatch). The
-> false-contradiction rate (a control with any candidate labelled refuting) is 25% (3 of 12).
-> None of those three is dropped: each has more supporting than refuting evidence, so the filter
-> scores it `contested` (downweight), not `refuted`. The false-drop rate on controls is 0 of 12,
-> because the strict drop thresholds turn a mislabelled control into a down-weight rather than a
-> drop. The residual softness is a stance-judge limitation, not a retrieval one.
->
-> Claim extraction (Gemini 2.5 Flash Lite) was measured against a strong-model reference: 83%
-> claim recall and strong condition retention (93-100% for population/comparator/direction), so
-> the extractor keeps conditions rather than stripping them; precision is lower because it
-> extracts more, finer-grained claims than the reference (`eval/README.md`).
+Claim extraction (measured against a strong-model reference) found 83% of the expected claims and
+kept their conditions 93–100% of the time; precision is lower only because it splits claims more
+finely (`eval/README.md`). All numbers use Gemini 2.5 Flash Lite; retrieval recall and recall@k are
+model-free.
 
 ## 🤔 Doesn't this exist already?
 

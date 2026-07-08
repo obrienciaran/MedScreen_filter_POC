@@ -25,10 +25,21 @@ Retrieval recall is the fraction of the known disproving studies that retrieval 
 does not depend on the model, so it is the main number.
 
 Recall@k is retrieval recall counting only cases where the disproving study ranked in the top k by
-semantic rank (k of 1, 5, 10, and 20).
+semantic rank (k of 1, 5, 10, and 20). It measures ranking, not just presence: recall@20 = 78%
+means the disproving study ranked in the top 20 for 78% of reversed claims. That top-20 cut is the
+one the live filter uses to bound how many candidates reach the paid stance judge, so a study
+ranked past 20 is retrieved but never judged.
 
 Stance recall is the fraction of retrieved disproving studies that the stance judge labelled as
 refuting. It is reported both over just the retrieved ones and over all reversed claims.
+
+Caveat: stance recall is measured with the known disproving study always handed to the judge, even
+when it ranked past the top 20 (the harness injects the answer-key document into the stance set on
+purpose, to isolate the judge's accuracy from ranking quality). That is why stance recall (91%) is
+higher than recall@20 (78%): 4 reversed claims had the disproving study retrieved but ranked past
+20, which a live filter would not have sent to the judge. Read them together: 91% is the judge's
+accuracy given the study reaches it, and 78% is the end-to-end catch rate through the ranking cap.
+The bottleneck here is ranking, not the judge.
 
 False-contradiction rate is the fraction of still-true control papers where any candidate was
 labelled refuting. It guards precision, because a harness that flags everything has perfect recall
@@ -53,30 +64,44 @@ MEDSCREEN_EMBED_BACKEND=sbert MEDSCREEN_STANCE_BACKEND=<provider> MEDSCREEN_LLM_
   medscreen-run --use-cache
 ```
 
-### Results (original seed: 16 reversals, 4 fabrications, 12 controls)
+### Results
 
-The gold set has since been doubled to 64 claims (28 reversals + 4 fabrications + 32 controls).
-The figures below were measured on the original 32-claim seed; re-measurement on the full set is
-pending and will refresh them.
+Measured on the 64-claim gold set, which splits into **32 wrong claims** (28 famous reversals + 4
+known fabrications) and **32 still-true controls**. Each measure below is a fraction of whichever
+half it applies to, so the denominators are 32, not 64. The model, where one is used, is **Gemini
+2.5 Flash Lite**.
 
-Retrieval recall is 90% (18 of 20), model-free and exact.
+| Measure | Result | Uses a model? |
+|---|---|---|
+| Disproving study found by the search | 94% (30 of 32 wrong) | No |
+| That study ranked in the top 20 | 78% (25 of 32 wrong) | No |
+| Judge reads the study as refuting, once shown | 91% (29 of 32 wrong) | Yes |
+| True controls picking up a refuting label | 47% (15 of 32 true) | Yes |
+| True controls wrongly dropped | 0 of 32 true | Yes |
+| Wrong claims caught (dropped or down-weighted) | 32 of 32 wrong | Yes |
+| Claims correctly extracted | 83% | Yes |
 
-Stance recall overall is 85%, using sbert ranking and Gemini 2.5 Flash Lite for stance.
+How to read the rows:
 
-The false-contradiction rate is 25% (3 of 12 controls), but no control was dropped (0 of 12). The
-three flagged controls had more supporting than refuting evidence, so the filter scored them
-`contested` (down-weight). A mislabelled control becomes a down-weight rather than a drop.
+- **Found by the search** is the headline: if the disproving study is never retrieved, nothing
+  downstream can use it. It uses no model, so it is exact and free.
+- **Ranked in the top 20** matters because only the 20 most relevant studies per claim are sent to
+  the judge; a study ranked lower is found but never judged. This, not the judge, is the real limit:
+  when the disproving study does reach the judge, it is read as refuting 91% of the time.
+- **Refuting label on a control** is high (47%) because ordinary true claims pull in near-miss
+  studies about a different population or dose, which the judge, reading only the abstract, over-reads
+  as a contradiction. It never turns into a drop: dropping a paper takes two independent strong
+  studies that agree, so every over-flagged control is down-weighted (reversible), not deleted. Of
+  the 32 wrong claims, 13 are dropped and 19 down-weighted.
 
-Extraction, comparing Gemini 2.5 Flash Lite against a stronger reference model, found 83% of the
-expected claims. Its precision is lower (43%) because it extracts more, finer-grained claims. It
-kept the conditions (population, comparator, direction) 93 to 100% of the time. See
-`eval/extraction/README.md`.
+Two wrong claims are missed, and both are accepted limits. In one, the claim and its refutation
+share only the topic (peptic ulcers, overturned by *H. pylori*). In the other, the overturning
+trial is buried among many near-identical ones (vertebroplasty). A keyword search cannot reach
+either without already naming the answer.
 
-Two retrieval misses remain, and they are accepted as a limitation. One is a conceptual reversal
-where the claim and its refutation share only the topic. The other is a landmark trial buried among
-many similar high-tier trials. A keyword search cannot reach either without already naming the
-answer, and adding an LLM step here would not be worth it for the POC. The filter is precision
-first, so some misses are acceptable.
+Claim extraction found 83% of the expected claims and kept their conditions (population, comparator,
+direction) 93 to 100% of the time. Its precision is lower (43%) because it splits claims more
+finely than the reference. See `eval/extraction/README.md`.
 
 ### Filter behaviour on ordinary papers
 

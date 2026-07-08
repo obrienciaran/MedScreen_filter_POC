@@ -83,11 +83,23 @@ For each paper:
 3. Retrieve evidence: for each claim, fetch candidate studies that bear on it. The pool is
    capped at 20 candidates per claim, which also bounds the stance step to at most 20 LLM calls
    per claim. When more than 20 are found, the paper's own dispute links come first (retraction
-   notices, then comment/erratum links), then the boolean query hits fill the rest. By default
-   the query hits keep their retrieval order; with the optional sbert backend
+   notices, then comment/erratum links), then the boolean query hits fill the rest.
+
+   The boolean query is a deterministic keyword search, not an LLM step. From the claim's
+   normalized fields (intervention, outcome, population) the filter builds a small ladder of
+   PubMed and Europe PMC queries: a loose `intervention AND outcome` core, a high-tier rung that
+   ANDs the core with strong publication types (`Meta-Analysis`, `Systematic Review`,
+   `Randomized Controlled Trial`, `Guideline`), a contradiction-seeking rung that adds harm
+   language (`risk OR harm OR mortality OR increased OR "no benefit" OR retracted`), a
+   retraction-targeted rung (intervention AND `Retracted Publication`), and a condition-focused
+   rung (intervention AND population under the high-tier filter). Terms are sanitized and passed
+   unquoted so each database's automatic term mapping can match differently-worded studies, and
+   the results of every rung are unioned so no single over-narrow query can drop the disproving
+   study. This runs entirely on the search APIs with no model call. See `query.py`.
+
+   By default the pooled query hits keep their retrieval order; with the optional sbert backend
    (`MEDSCREEN_EMBED_BACKEND=sbert`) they are re-ranked by semantic relevance so the most
-   relevant 20 are judged, with vectors cached in DuckDB (shared with the validation harness) and
-   the model running on GPU when available.
+   relevant 20 are judged, with vectors cached in DuckDB and the model running on GPU when available.
 4. Judge stance: an LLM labels each candidate supporting, refuting, or neutral toward the claim.
 5. Score: combine those labels with each study's evidence tier into a per-claim verdict. Every
    claim is scored, but the paper's verdict and score come from its single most damning claim.
@@ -109,6 +121,37 @@ without a key or a network call. Stub output is a placeholder, not a real result
 
 See the [design notes](DESIGN.md) for how evidence is found, how scoring works, and how retrieval
 is validated.
+
+## 📊 Results
+
+Tested on 64 medical claims with a known answer: **32 wrong** (famous reversals and known
+fabrications) and **32 true** (still accepted). The test is to catch a wrong claim without attacking
+a true one. MedScreen uses **Gemini 2.5 Flash Lite** for its two model steps. As a baseline, we gave
+the **same model** each claim to judge from memory, with no evidence lookup.
+
+| Outcome | LLM alone (from memory) | MedScreen (with evidence) |
+|---|---|---|
+| Wrong claims caught (of 32 wrong) | 30 | **32** |
+| True claims wrongly dropped (of 32 true) | 0 | **0** |
+
+MedScreen on its own terms:
+
+| What we measured | Result |
+|---|---|
+| Disproving study found by the search | 94% (30 of 32 wrong) |
+| Wrong claims caught (dropped or down-weighted) | 32 of 32 wrong |
+| True claims wrongly dropped | 0 of 32 true |
+| True claims down-weighted instead (reversible) | 15 of 32 true |
+| Claims correctly extracted | 83% |
+
+Same model on both sides, so it is like-for-like. From memory the model misses a fabrication and a
+retraction it was never taught; MedScreen catches both by reading the retraction notice and the
+overturning trial from the evidence. The trade-off is precision: it down-weights 15 true claims
+where the model keeps all 32, but it never deletes a true claim, because dropping a paper takes two
+independent strong studies that agree.
+
+Full numbers are in [`eval/README.md`](eval/README.md); the [design notes](DESIGN.md) define each
+measure in plain English.
 
 ## ⚙️ Setup
 
@@ -157,23 +200,10 @@ medscreen-graph            # render the evidence graph to reports/graph.html
 pytest                   # unit tests (network tests are opt-in: pytest -m live)
 ```
 
-`medscreen-run` works offline with stub backends, so it needs no API key. Results so far:
-
-- It found 90% of the known disproving studies, and correctly read 85% of those as contradicting
-  the claim.
-- No known-good control paper was wrongly dropped. A few were down-weighted instead, which is the
-  safe, reversible action.
-- Claim extraction found 83% of the expected claims and kept their conditions intact.
-
-Those numbers were measured on the first version of the gold set (32 claims). The set has since
-grown to 64 claims (28 reversals, 4 fabrications, 32 controls), and re-measuring on the full set is
-still to do. [`eval/README.md`](eval/README.md) explains what each number means and which ones need
-a real LLM.
-
-We also ran a simpler check to see if the retrieval machinery is worth it: ask an LLM to judge each
-gold claim from its own knowledge, with no retrieval at all. It scores well on famous reversals but
-misses fabrications and retractions it was never taught, which is exactly what retrieval and the
-retraction fast path are for. That comparison is in
+`medscreen-run` works offline with stub backends, so retrieval recall needs no API key (only stance
+and precision need a paid model). It writes a report to `reports/recall-<timestamp>.{md,csv}`. See
+[Results](#-results) above for the headline numbers and [`eval/README.md`](eval/README.md) for what
+each one means. The no-retrieval LLM-only comparison is in
 [`reports/llm_only_baseline.md`](reports/llm_only_baseline.md).
 
 ## 🌀 Visualization (optional)
