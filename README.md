@@ -9,6 +9,12 @@ at a corpus of PubMed papers (XML) and it produces a flat table, one row per pap
 whether each paper's claims hold up against trusted medical evidence. Downstream training can then
 keep, down-weight, or drop papers based on that table.
 
+The goal is to keep only high-quality data. It is a form of rejection sampling for a training
+corpus: check each paper's claims, keep the ones that survive, and drop or down-weight the rest.
+Because it checks claims against current evidence and publication dates, it naturally favours newer
+findings that overturn older ones, so a paper repeating a claim that has since been reversed gets
+caught.
+
 Rule-based filters and LLM raters judge a paper by how it reads, which is what confident
 misinformation imitates best. This filter checks each claim against retrieved evidence instead.
 
@@ -151,14 +157,24 @@ medscreen-graph            # render the evidence graph to reports/graph.html
 pytest                   # unit tests (network tests are opt-in: pytest -m live)
 ```
 
-`medscreen-run` defaults to stub backends (offline, no key). On the original 32-claim seed the
-pipeline retrieves 90% of the known disproving studies and correctly recognises 85% of them as
-contradicting the claim. None of the 12 known-good control papers were wrongly dropped. A few
-were flagged for down-weighting instead, which is the safe and reversible action. Claim
-extraction finds 83% of the expected claims and keeps their conditions intact. The gold set has
-since been doubled to 64 claims (28 reversals + 4 fabrications + 32 controls); those figures were
-measured on the original seed and re-measurement on the full set is pending. What each metric
-means, which need a real LLM backend, and the full results are in [`eval/README.md`](eval/README.md).
+`medscreen-run` works offline with stub backends, so it needs no API key. Results so far:
+
+- It found 90% of the known disproving studies, and correctly read 85% of those as contradicting
+  the claim.
+- No known-good control paper was wrongly dropped. A few were down-weighted instead, which is the
+  safe, reversible action.
+- Claim extraction found 83% of the expected claims and kept their conditions intact.
+
+Those numbers were measured on the first version of the gold set (32 claims). The set has since
+grown to 64 claims (28 reversals, 4 fabrications, 32 controls), and re-measuring on the full set is
+still to do. [`eval/README.md`](eval/README.md) explains what each number means and which ones need
+a real LLM.
+
+We also ran a simpler check to see if the retrieval machinery is worth it: ask an LLM to judge each
+gold claim from its own knowledge, with no retrieval at all. It scores well on famous reversals but
+misses fabrications and retractions it was never taught, which is exactly what retrieval and the
+retraction fast path are for. That comparison is in
+[`reports/llm_only_baseline.md`](reports/llm_only_baseline.md).
 
 ## 🌀 Visualization (optional)
 

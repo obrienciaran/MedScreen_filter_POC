@@ -1,4 +1,4 @@
-"""Fetch 10 representative recent PubMed papers as standalone XML for a filter trial.
+"""Fetch representative recent PubMed papers as standalone XML for a filter trial.
 
 Unlike scripts/fetch_trial_xml.py (a curated, retraction-heavy stress test), this samples
 ordinary recent journal articles across a spread of common clinical areas, excluding
@@ -8,13 +8,12 @@ so the run reflects how the filter behaves on typical input (mostly kept).
 Uses NCBI E-utilities. No LLM and no API key needed. Set NCBI_EMAIL for politeness, and
 MEDSCREEN_INSECURE_TLS=1 / MEDSCREEN_CA_BUNDLE behind a TLS-terminating proxy.
 
-    python scripts/fetch_representative_xml.py                     # canonical 10-paper sample
-    python scripts/fetch_representative_xml.py --target 80 --per-topic 2 \
-        --out-dir data/representative_large                        # larger sample
+    python scripts/fetch_representative_xml.py                     # default 30-paper sample
+    python scripts/fetch_representative_xml.py --target 60 --per-topic 2  # larger sample
 
-Scaling the set up lets you measure, on more than ten papers, how often the filter fails to keep
-an ordinary paper it should keep (down-weighting or dropping it). Pair it with
-scripts/flag_audit.py to summarise the run and list the papers it did not keep.
+The set lets you measure how often the filter fails to keep an ordinary paper it should keep
+(down-weighting or dropping it). Pair it with scripts/flag_audit.py to summarise the run and
+list the papers it did not keep.
 """
 
 from __future__ import annotations
@@ -34,8 +33,7 @@ DEFAULT_OUT_DIR = Path("data/representative")
 # Ordinary recent papers across common clinical areas, a representative sample the filter should
 # mostly keep. The default run takes one paper per topic and stops at the first ``--target``. A
 # larger set is reached by raising ``--per-topic`` and ``--target``, which is why the pool is
-# long. The first ten topics reproduce the original canonical sample, so the default run is
-# unchanged.
+# long.
 _NOT_RETRACTED = 'NOT "Retracted Publication"[pt] NOT "Retraction of Publication"[pt]'
 TOPICS = [
     "type 2 diabetes",
@@ -183,7 +181,7 @@ def write_papers(pmids: list[str], out_dir: Path) -> int:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="Fetch ordinary recent PubMed papers as XML.")
-    ap.add_argument("--target", type=int, default=10, help="total papers to fetch")
+    ap.add_argument("--target", type=int, default=30, help="total papers to fetch")
     ap.add_argument("--per-topic", type=int, default=1, help="max papers taken per topic")
     ap.add_argument("--start-year", type=int, default=2024)
     ap.add_argument("--end-year", type=int, default=2025)

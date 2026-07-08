@@ -15,8 +15,9 @@ extractor:
     MEDSCREEN_EXTRACT_BACKEND=llm MEDSCREEN_LLM_PROVIDER=gemini \\
       python eval/extraction/score.py                                  # real extractor
 
-The matching (``similarity`` / ``match_claims``) is pure and unit-tested. See ``eval/README.md``
-for the not-human-verified reference caveat.
+It writes the results into ``eval/extraction/README.md``. The matching (``similarity`` /
+``match_claims``) is pure and unit-tested. See ``eval/README.md`` for the not-human-verified
+reference caveat.
 """
 
 from __future__ import annotations
@@ -30,7 +31,7 @@ import yaml
 
 HERE = Path(__file__).resolve().parent
 REFS = HERE / "reference_claims.yaml"
-RESULTS = HERE / "results.md"
+RESULTS = HERE / "README.md"
 
 # Token overlap (Jaccard) at/above which a reference and an extracted claim are the same claim.
 MATCH_THRESHOLD = 0.18
@@ -146,32 +147,52 @@ def run(refs_path: Path = REFS) -> str:
     pct = lambda x: f"{x * 100:.0f}%"
     ratio = lambda kept, spec: f"{pct(kept / spec)} ({kept}/{spec})" if spec else "n/a"
     lines = [
-        "# Claim-extraction evaluation results",
+        "# Claim extraction check",
+        "",
+        "Before any evidence is retrieved, the filter uses an LLM to pull each paper's claims out of",
+        "its text. If that step misses a claim, or drops the conditions attached to it (who was",
+        "studied, the comparison, the direction of effect), everything after it is judged on the",
+        "wrong thing. This folder measures how well the extractor does that job.",
+        "",
+        "## What is here",
+        "",
+        "- `reference_claims.yaml`: 10 papers from the representative sample, each with its title,",
+        "  abstract, and a set of expected claims (with conditions attached).",
+        "- `papers/`: the pinned PubMed XML for those papers.",
+        "- `score.py`: runs the extractor on each paper, matches its claims against the expected",
+        "  ones, and rewrites this file with the numbers below.",
+        "",
+        "## How to run",
+        "",
+        "Needs a real LLM. From the repo root:",
+        "",
+        "```bash",
+        "MEDSCREEN_EXTRACT_BACKEND=llm MEDSCREEN_LLM_PROVIDER=gemini python eval/extraction/score.py",
+        "```",
+        "",
+        "## Latest results",
         "",
         f"- Extractor: `{extractor.name}`",
         f"- Run: {dt.datetime.now().strftime('%Y-%m-%d %H:%M')}",
-        f"- Papers: {len(papers)}  |  reference claims: {tot_ref}  |  extracted claims: {tot_ext}",
+        f"- Papers: {len(papers)}  |  expected claims: {tot_ref}  |  extracted claims: {tot_ext}",
         "",
-        "## Claim matching",
-        "",
-        f"- **Recall** (reference claims found): **{pct(recall)}** ({tot_match}/{tot_ref})",
-        f"- **Precision** (extracted claims that match a reference): **{pct(precision)}** ({tot_match}/{tot_ext})",
+        f"- **Recall** (expected claims found): **{pct(recall)}** ({tot_match}/{tot_ref})",
+        f"- **Precision** (extracted claims that match an expected one): **{pct(precision)}**"
+        f" ({tot_match}/{tot_ext}). Lower because the extractor pulls more, finer-grained claims.",
         f"- **F1**: {pct(f1)}",
         "",
-        "## Condition retention (over matched claims where the reference specifies the field)",
+        "Conditions kept, over matched claims where the expected claim specifies the field:",
         "",
         f"- Population kept: {ratio(*cond_totals['population'])}",
         f"- Comparator kept: {ratio(*cond_totals['comparator'])}",
         f"- Direction agreement: {ratio(*cond_totals['direction'])}",
         "",
-        "## Per paper",
-        "",
-        "| pmid | reference | extracted | matched |",
+        "| pmid | expected | extracted | matched |",
         "|---|---|---|---|",
         *rows,
         "",
-        "> Reference not human-verified: the reference claims were extracted by a strong model,"
-        " so this measures agreement with that model, not human ground truth (see `eval/README.md`).",
+        "Caveat: the expected claims were written by a strong model (Claude), not a person, so this",
+        "measures agreement with that model, not human ground truth (see `eval/README.md`).",
         "",
     ]
     return "\n".join(lines)

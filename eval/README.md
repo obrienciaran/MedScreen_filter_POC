@@ -70,7 +70,7 @@ three flagged controls had more supporting than refuting evidence, so the filter
 Extraction, comparing Gemini 2.5 Flash Lite against a stronger reference model, found 83% of the
 expected claims. Its precision is lower (43%) because it extracts more, finer-grained claims. It
 kept the conditions (population, comparator, direction) 93 to 100% of the time. See
-`eval/extraction/results.md`.
+`eval/extraction/README.md`.
 
 Two retrieval misses remain, and they are accepted as a limitation. One is a conceptual reversal
 where the claim and its refutation share only the topic. The other is a landmark trial buried among
@@ -81,14 +81,14 @@ first, so some misses are acceptable.
 ### Filter behaviour on ordinary papers
 
 The harness above measures known reversals. To see how the filter behaves on ordinary papers, run
-it on `data/representative_large/` (30 recent, non-retracted papers across common clinical areas)
-and audit how many were flagged:
+it on `data/representative/` (30 recent, non-retracted papers across common clinical areas) and
+audit how many were flagged:
 
 ```bash
 MEDSCREEN_LLM_PROVIDER=<provider> MEDSCREEN_EXTRACT_BACKEND=llm MEDSCREEN_STANCE_BACKEND=llm \
-  MEDSCREEN_RETRIEVER=live medscreen-filter --input data/representative_large \
-  --out-csv reports/representative_large.csv
-python scripts/flag_audit.py --csv reports/representative_large.csv
+  MEDSCREEN_RETRIEVER=live medscreen-filter --input data/representative \
+  --out-csv reports/representative.csv
+python scripts/flag_audit.py --csv reports/representative.csv
 ```
 
 `flag_audit.py` reports how many of these papers the filter did not keep, that is, how many it

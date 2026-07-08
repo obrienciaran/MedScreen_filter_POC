@@ -1,39 +1,43 @@
 # Data folders
 
-Two folders hold example PubMed papers you can run the filter on. They show the
-filter working in two opposite ways. Two more hold single-paper case studies (see
-`eval/README.md`): `bixonimania_live` (a fabricated, non-existent condition that the
-filter leaves `ungrounded`) and `retracted_drop_live` (a formally retracted paper the
-filter `drop`s via the retraction fast path).
+Sample PubMed papers to run the filter on. Each folder shows the filter working in a different
+way.
 
-## trial
+## gold
 
-A hand picked set of 10 papers. Most of them have been retracted, so the filter
-should flag them as bad and drop them. A few solid papers are mixed in as a
-check. Use this set to see that the filter catches bad papers.
-
-Built by `scripts/fetch_trial_xml.py`.
+The labelled test set (`gold/consensus_reversals.yaml`). It holds medical claims the field is
+known to have reversed, each tagged with the study that overturned it, plus still-true controls.
+This is what the filter's accuracy is measured against. See `eval/README.md`.
 
 ## representative
 
-A plain sample of recent papers across common areas of medicine. Retracted
-papers are left out on purpose. These are normal papers, so the filter should
-keep most of them. Use this set to see that the filter does not wrongly flag
-good papers, and to measure how often it does (how many it fails to keep).
+A sample of 30 recent papers across common areas of medicine, with retracted papers left out on
+purpose. These are ordinary papers, so the filter should keep almost all of them. Use this set to
+check that the filter does not wrongly flag good papers, and to measure how often it does.
 
-Built by `scripts/fetch_representative_xml.py`. The default run fetches the
-canonical 10 (one per topic). Scale it up to measure how many good papers the
-filter fails to keep across more than ten papers:
+Built by `scripts/fetch_representative_xml.py`:
 
 ```bash
-python scripts/fetch_representative_xml.py --target 80 --per-topic 2 \
-    --out-dir data/representative_large
-medscreen-filter --input data/representative_large --out-csv reports/representative.csv
+python scripts/fetch_representative_xml.py --out-dir data/representative
+medscreen-filter --input data/representative --out-csv reports/representative.csv
 python scripts/flag_audit.py --csv reports/representative.csv
 ```
 
-`flag_audit.py` reads the filter CSV (offline, no LLM) and reports how the papers
-were split across `keep`, `downweight`, `drop`, and `review`, how many were not
-kept, and a table of just those not-kept papers to inspect. On a set of ordinary
-papers the filter should keep, every paper it did not keep is a candidate false
-positive worth a look.
+`flag_audit.py` reads the filter output (offline, no LLM) and reports how the papers split across
+keep, down-weight, drop, and review, and lists the ones that were not kept. On a set of ordinary
+papers, every paper the filter did not keep is a possible false positive worth a look.
+
+## trial
+
+A hand-picked set of 10 papers, most of them retracted. The filter should flag those as bad and
+drop them, with a few solid papers mixed in as a check. Use this set to see that the filter
+catches bad papers. Built by `scripts/fetch_trial_xml.py`.
+
+## Single-paper case studies
+
+Two folders hold one paper each, to show a single verdict (see `eval/README.md`):
+
+- `bixonimania_live`: a made-up condition that does not exist. There is nothing to retrieve, so
+  the filter leaves it `ungrounded` and flags it for review rather than passing it.
+- `retracted_drop_live`: a formally retracted paper. The filter drops it straight away by reading
+  the retraction link in its own XML, with no LLM call.

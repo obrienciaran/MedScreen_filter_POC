@@ -27,21 +27,20 @@ Retrieval is tuned so a known refutation actually comes back:
 - Optional cache: set `MEDSCREEN_QUERY_CACHE` to a file path (DuckDB) to fetch repeated searches
   once across a corpus. Unset to always search live.
 
-Per-claim cap and ordering. The filter caps the candidate pool at 20 per claim
-(`scraping/evidence.py`, the `limit` argument), which in turn bounds the stance LLM to at most 20
-calls per claim, so a claim that matches hundreds of papers never triggers hundreds of model
-calls. When more than 20 are found, the order that decides who survives the cap is: the paper's
-own dispute links first (retraction notices, then comment/erratum links), because those are the
-highest-signal, lowest-noise evidence a filter has and must not be crowded out; then the query
-hits fill the remaining slots. By default the query hits keep their retrieval order (the search
-APIs' own relevance sort), which is cheap and needs no model. With the optional sbert backend
-(`MEDSCREEN_EMBED_BACKEND=sbert`) the query hits are instead re-ranked by semantic similarity to
-the claim before the cap, so the top 20 sent to the stance LLM are the most relevant rather than
-the first found — which matters at scale, where a claim can match hundreds of studies but only 20
-can be judged. Vectors are cached in DuckDB and shared with the harness, so a study is embedded
-once. Accepting that some genuinely relevant study can fall outside the top 20 is a deliberate
-precision-over-recall trade: a tighter pool feeds the stance judge less noise, and the strict
-drop thresholds already reserve the destructive action for corroborated, high-tier refutation.
+Per-claim cap and ordering. The filter keeps at most 20 candidate studies per claim
+(`scraping/evidence.py`, the `limit` argument). This also caps the stance model at 20 calls per
+claim, so a claim that matches hundreds of papers never triggers hundreds of model calls. When
+more than 20 are found, the paper's own dispute links come first (retraction notices, then
+comment/erratum links), since those are the strongest and cleanest evidence a filter has. The
+query hits fill the remaining slots. By default they keep the order the search APIs returned them
+in, which is free and needs no model. With the optional sbert backend
+(`MEDSCREEN_EMBED_BACKEND=sbert`) they are re-ranked by how close they are in meaning to the claim
+before the cap, so the 20 sent to the stance model are the most relevant rather than the first
+found. This matters at scale, where a claim can match hundreds of studies but only 20 can be
+judged. Vectors are cached in DuckDB and shared with the test harness, so each study is embedded
+once. A genuinely relevant study can fall outside the top 20. The filter accepts that to keep the
+pool tight and the stance judge's input clean, and the strict drop thresholds already reserve the
+drop action for well-supported, high-tier refutation.
 
 Embeddings (`transformation/semantic.py`) only re-rank an already-fetched pool; they cannot
 recover a study the queries never returned. Whether the queries succeed is the central failure
@@ -51,9 +50,9 @@ the same DuckDB embedding cache, so each study is embedded once and reused acros
 on the GPU when one is present.
 
 The stance judge then reads only each candidate's title and abstract, never its full text. This
-is a deliberate cost trade-off: abstracts are cheap to fetch and short to send to the model, but
-a refutation or a condition caveat that lives only in a paper's Results or Methods is invisible
-to it. It is a known ceiling on both stance recall and precision, accepted for the POC.
+saves cost: abstracts are cheap to fetch and short to send to the model. The downside is that a
+refutation or a condition caveat found only in a paper's Results or Methods is invisible to it,
+which limits both stance recall and precision. Accepted for the POC.
 
 > Status: proof of concept. Tested on 10 PubMed papers with Gemini 2.5 Flash Lite (6 kept, 4
 > downweighted, 0 dropped; all 10 got a real verdict). Not yet run on a large or varied dataset;
@@ -61,14 +60,13 @@ to it. It is a known ceiling on both stance recall and precision, accepted for t
 
 ## 📄 How a paper is scored
 
-Scoring is a mechanical aggregation of the stance model's per-study judgements, weighted by
-evidence tier, with fixed thresholds in `transformation/scoring.py`. The arithmetic and the
-keep/drop decision are deterministic and never call the model, but the inputs it combines (each
-study's stance label and the model's confidence in it) are model judgements, so the stance model
-is load-bearing for the *direction* of an evidence-based verdict even though it never makes the
-verdict itself. What the mechanical layer guarantees is that no single study's label decides a
-paper on its own: the label is weighted by the study's evidence tier, combined across the body of
-retrieved evidence, and gated by strict drop thresholds.
+Scoring combines the stance model's per-study labels, weighted by evidence tier, with fixed
+thresholds in `transformation/scoring.py`. The arithmetic and the keep/drop decision are fixed and
+never call the model. But its inputs, each study's stance label and the model's confidence in it,
+do come from the model, so the stance model still shapes which way an evidence-based verdict goes,
+even though it never makes the verdict itself. The scoring layer guarantees that no single study's
+label decides a paper on its own: each label is weighted by the study's evidence tier, combined
+across all the retrieved evidence, and held to strict drop thresholds.
 
 0. Retraction fast path. If the paper's own XML shows it is formally retracted, either via a
    `RetractionIn` link or the `Retracted Publication` publication type, drop it immediately with
@@ -148,10 +146,9 @@ good-faith science superseded by a newer study (found by keyword/high-tier searc
 `fabrication` is retracted misconduct whose disproving evidence is the retraction notice
 (found via the retraction link). That is a separate path, reached by a retraction-targeted query.
 
-> Note on the numbers below: the gold set was doubled to 64 claims (28 reversals + 4
-> fabrications + 32 controls). The recall/stance figures here were measured on the original
-> 32-claim seed (16 reversals + 4 fabrications + 12 controls); re-measurement on the full set is
-> pending and will refresh them.
+> Note on the numbers below: the gold set now holds 64 claims (28 reversals + 4 fabrications + 32
+> controls). The recall/stance figures here were measured on the first 32-claim version (16
+> reversals + 4 fabrications + 12 controls). Re-measuring them on the full set is still to do.
 >
 > Status: retrieval recall is 90% (18 of 20 reversed) on the original seed (16 reversals +
 > 4 fabrications + 12 controls), measured model-free via `medscreen-build-cache` +
