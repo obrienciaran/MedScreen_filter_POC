@@ -35,9 +35,9 @@ before it is used in production.
 ## ➡️ What it produces
 
 Running the filter writes `reports/filter.csv`, one row per paper. The filter can also draw an
-optional evidence graph over the same data (`reports/filter.html`), but the table is the product.
+optional evidence graph over the same data (`reports/filter.html`), but the table is the final output for use downstream.
 
-<img width="1199" height="231" alt="Screenshot 2026-07-05 at 19 25 53" src="https://github.com/user-attachments/assets/c9974e8b-0205-4d2c-9e39-b086f32538c1" />
+<img width="1466" height="274" alt="Screenshot 2026-07-08 at 22 48 36" src="https://github.com/user-attachments/assets/cb3a72f9-27bf-472d-a005-9804c1c2d7ec" />
 
 The columns in the screenshot:
 
